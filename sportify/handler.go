@@ -310,6 +310,12 @@ func (h *Handler) TryCreateEvent(w http.ResponseWriter, r *http.Request) {
 
 	// TODO detect
 
+	if ok, err := detect(tgMessage.RawMessage, detectRegExps, 3); !ok || err != nil {
+		fmt.Println("err detect: ", err)
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	fullEvent, err := h.RequestToYaGPT(strings.ReplaceAll(tgMessage.RawMessage, "\n", " "))
 	if err != nil {
 		h.HandleError(w, err)
