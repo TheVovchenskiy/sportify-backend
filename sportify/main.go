@@ -7,6 +7,19 @@ import (
 	"net/http"
 )
 
+func RunTgHandler(handler Handler) error {
+	r := chi.NewRouter()
+	r.Use(middleware.Recoverer)
+	r.Use(middleware.Logger)
+
+	r.Post("/message", handler.TryCreateEvent)
+
+	port := ":8090"
+	fmt.Printf("listen bot input %s\n", port)
+
+	return http.ListenAndServe(port, r)
+}
+
 func main() {
 	simpleEventStorage, err := NewSimpleEventStorage()
 	if err != nil {
@@ -32,6 +45,12 @@ func main() {
 
 		fs.ServeHTTP(w, r)
 	})
+
+	go func() {
+		if err := RunTgHandler(handler); err != nil {
+			panic(err)
+		}
+	}()
 
 	port := ":8080"
 	fmt.Printf("listen %s\n", port)

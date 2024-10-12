@@ -138,3 +138,22 @@ func (h *Handler) SubscribeEvent(w http.ResponseWriter, r *http.Request) {
 
 	w.Write(respBody)
 }
+
+func (h *Handler) TryCreateEvent(w http.ResponseWriter, r *http.Request) {
+	var tgMessage TgMessage
+
+	reqBody, err := io.ReadAll(r.Body)
+	if err != nil {
+		h.HandleError(w, err)
+		return
+	}
+
+	err = json.Unmarshal(reqBody, &tgMessage)
+	if err != nil {
+		h.HandleError(w, err)
+		return
+	}
+
+	log.Printf("%+v", tgMessage)
+	w.WriteHeader(http.StatusOK)
+}

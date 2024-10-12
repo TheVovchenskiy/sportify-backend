@@ -13,7 +13,7 @@ go version
 ```
 Вывод примерно такой: go version go1.23.0 linux/amd64
 
-Для запуска бэка: 
+Для запуска бэка на порту 8080: 
 ```shell
 cd sportify && go run .
 ```

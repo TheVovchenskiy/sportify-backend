@@ -3,3 +3,4 @@
 bot.session
 bin*
 .idea
+__pycache__

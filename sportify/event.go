@@ -23,6 +23,10 @@ import (
 //“preview”: “string url”,
 //“photos”: “[string url]”
 
+type TgMessage struct {
+	RawMessage string `json:"text"`
+}
+
 const (
 	TypeVolleyball SportType = "volleyball"
 	TypeBasketball SportType = "basketball"
