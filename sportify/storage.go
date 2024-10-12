@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
+	"sort"
 	"sync"
 	"time"
 )
@@ -130,6 +131,10 @@ func (s *SimpleEventStorage) GetEvents() ([]ShortEvent, error) {
 	for _, v := range s.m {
 		events = append(events, v.ShortEvent)
 	}
+
+	sort.Slice(events, func(i, j int) bool {
+		return events[j].StartTime.After(events[i].StartTime)
+	})
 
 	return events, nil
 }
