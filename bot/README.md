@@ -13,7 +13,7 @@
 Далее необходимо установить зависимости. Для этого используйте команду:
 
 ```bash
-$ BOT_TOKEN=<bot-token> pip install -r requirements.txt
+$ pip install -r requirements.txt
 ```
 
 ### Конфиги
@@ -25,7 +25,7 @@ $ BOT_TOKEN=<bot-token> pip install -r requirements.txt
 Теперь, когда все необходимое установлено, можно запускать бота. Для этого можно использовать команду **из корня репозитория**:
 
 ```bash
-$ python bot/main.py ../config/config.yaml
+$ BOT_TOKEN=<bot-token> python bot/main.py ../config/config.yaml
 ```
 
 Более подробную информацию о данной команде можно получить с помощью флага `--help`:
