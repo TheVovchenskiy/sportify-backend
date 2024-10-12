@@ -2,7 +2,8 @@
 
 Установка го:
 ```shell
-rm -rf /usr/local/go && tar -C /usr/local -xzf go1.23.2.linux-amd64.tar.gz && \
+wget --directory-prefix=bin https://go.dev/dl/go1.23.2.linux-amd64.tar.gz && \
+sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf bin/go1.23.2.linux-amd64.tar.gz && \
 export PATH=$PATH:/usr/local/go/bin
 ```
 
@@ -10,6 +11,7 @@ export PATH=$PATH:/usr/local/go/bin
 ```shell
 go version
 ```
+Вывод примерно такой: go version go1.23.0 linux/amd64
 
 Для запуска бэка: 
 ```shell
