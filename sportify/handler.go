@@ -308,8 +308,6 @@ func (h *Handler) TryCreateEvent(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("%+v", tgMessage)
 
-	// TODO detect
-
 	if ok, err := detect(tgMessage.RawMessage, sportEventRegExps, 3); !ok || err != nil {
 		fmt.Println("err detect: ", err)
 		w.WriteHeader(http.StatusOK)
