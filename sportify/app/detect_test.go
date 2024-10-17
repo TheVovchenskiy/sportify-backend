@@ -1,4 +1,4 @@
-package main
+package app
 
 import "testing"
 
@@ -71,7 +71,7 @@ https://footballvmoskve.ru/`,
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual, err := detect(tc.text, sportEventRegExps, 3)
+			actual, err := Detect(tc.text, SportEventRegExps, 3)
 			if !actual {
 				t.Errorf("Did not return true, err: %q", err)
 			}

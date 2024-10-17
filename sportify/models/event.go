@@ -1,4 +1,4 @@
-package main
+package models
 
 import (
 	"errors"
@@ -6,23 +6,6 @@ import (
 
 	"github.com/google/uuid"
 )
-
-//“id”: “uuid (бэк генерит)”,
-//"sport_type": "enum(volleball, basketball, football)",
-//"address": "text",
-//"date" : "timestamp",
-//"start_time": "timestamp",
-//"end_time": "?timestamp",
-//"price": "? number rubles",
-//"is_free": "bool",
-//"game_level": "? [enums] (low, mid_minus, mid, mid_plus, high",
-//"description": "? text",
-//"raw_message": "? text",
-//"capacity": "? number",
-//"busy": "? number",
-//“subscribers_id”: “[uuid]”
-//“preview”: “string url”,
-//“photos”: “[string url]”
 
 type TgMessage struct {
 	RawMessage string `json:"text"`
@@ -70,8 +53,8 @@ type ShortEvent struct {
 }
 
 var (
-	ErrAllBusy            = errors.New("all places are busy")
-	ErrNotFoundSubscriber = errors.New("not found subscriber in event")
+	ErrAllBusy            = errors.New("все места заняты")
+	ErrNotFoundSubscriber = errors.New("не найден подписчик события")
 )
 
 func (s *ShortEvent) AddSubscriber(id uuid.UUID) ([]uuid.UUID, error) {

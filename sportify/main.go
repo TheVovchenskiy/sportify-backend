@@ -1,61 +1,27 @@
 package main
 
 import (
-	"fmt"
-	"net/http"
+	"context"
 
-	chi "github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	"github.com/TheVovchenskiy/sportify-backend/server"
+
+	"github.com/fsnotify/fsnotify"
+	"github.com/spf13/viper"
 )
 
-func RunTgHandler(handler Handler) error {
-	r := chi.NewRouter()
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.Logger)
-
-	r.Post("/message", handler.TryCreateEvent)
-
-	port := ":8090"
-	fmt.Printf("listen bot input %s\n", port)
-
-	return http.ListenAndServe(port, r)
-}
-
 func main() {
-	simpleEventStorage, err := NewSimpleEventStorage()
-	if err != nil {
-		panic(err)
-	}
+	srv := server.Server{}
+	baseCtx := context.Background()
 
-	handler := Handler{Storage: simpleEventStorage}
-
-	r := chi.NewRouter()
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.Logger)
-	r.Get("/events", handler.GetEvents)
-	r.Get("/event/{id}", handler.GetEvent)
-	r.Put("/event/sub/{id}", handler.SubscribeEvent)
-
-	r.Get("/img/*", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/img/" {
-			http.Error(w, "404 page not found", http.StatusNotFound)
-			return
-		}
-
-		fs := http.StripPrefix("/img/", http.FileServer(http.Dir("./photos")))
-
-		fs.ServeHTTP(w, r)
-	})
-
-	go func() {
-		if err := RunTgHandler(handler); err != nil {
+	viper.OnConfigChange(func(_ fsnotify.Event) {
+		err := srv.ReRun(baseCtx)
+		if err != nil {
 			panic(err)
 		}
-	}()
+	})
+	viper.WatchConfig()
 
-	port := ":8080"
-	fmt.Printf("listen %s\n", port)
-	if err := http.ListenAndServe(port, r); err != nil {
+	if err := srv.Run(baseCtx); err != nil {
 		panic(err)
 	}
 }

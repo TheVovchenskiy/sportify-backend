@@ -1,4 +1,4 @@
-package main
+package db
 
 import (
 	"errors"
@@ -7,94 +7,87 @@ import (
 	"sync"
 	"time"
 
+	"github.com/TheVovchenskiy/sportify-backend/models"
+	"github.com/TheVovchenskiy/sportify-backend/pkg/common"
+
 	"github.com/google/uuid"
 )
 
-//
-//две ручки /events - список, /event/id - подробные
-//ручка PUT запись на событие /event/sub/id {“sub” true или false, “user_id”:”uuid”}
-
-type EventStorage interface {
-	AddEvent(event FullEvent) error
-	GetEvents() ([]ShortEvent, error)
-	GetEvent(id uuid.UUID) (*FullEvent, error)
-	SubscribeEvent(id uuid.UUID, userID uuid.UUID, subscribe bool) (*ResponseSubscribeEvent, error)
-}
-
 type SimpleEventStorage struct {
 	mu *sync.RWMutex
-	m  map[uuid.UUID]FullEvent
+	m  map[uuid.UUID]models.FullEvent
 }
 
 func NewSimpleEventStorage() (*SimpleEventStorage, error) {
 	s := SimpleEventStorage{
 		mu: &sync.RWMutex{},
-		m:  make(map[uuid.UUID]FullEvent),
+		m:  make(map[uuid.UUID]models.FullEvent),
 	}
 
 	return &s, s.FillSimpleEventStorage()
 }
 
-var events = []FullEvent{
+var events = []models.FullEvent{
 	{
-		ShortEvent: ShortEvent{
+		ShortEvent: models.ShortEvent{
 			ID:          uuid.New(),
-			SportType:   TypeFootball,
+			SportType:   models.TypeFootball,
 			Address:     "г. Москва Госпитальный пер. 4/6 стр. 3",
 			Date:        time.Date(2024, 10, 14, 0, 0, 0, 0, time.UTC),
 			StartTime:   time.Date(2024, 10, 14, 20, 0, 0, 0, time.UTC),
 			EndTime:     nil,
-			Price:       Ref(0),
+			Price:       common.Ref(0),
 			IsFree:      true,
-			GameLevel:   Ref(GameLevelMidMinus),
+			GameLevel:   common.Ref(models.GameLevelMidMinus),
 			Capacity:    nil,
 			Busy:        0,
 			Subscribers: nil,
 			PreviewURL:  "http://127.0.0.1:8080/img/default_football.jpeg",
 			PhotoURLs:   nil,
 		},
-		Description: Ref("Приходите все! Чисто игровая тренировка"),
+		Description: common.Ref("Приходите все! Чисто игровая тренировка"),
 		RawMessage:  nil,
 	},
 	{
-		ShortEvent: ShortEvent{
+		ShortEvent: models.ShortEvent{
 			ID:          uuid.New(),
-			SportType:   TypeFootball,
+			SportType:   models.TypeFootball,
 			Address:     "г. Москва Госпитальный пер. 4/6 стр. 3",
 			Date:        time.Date(2024, 10, 15, 0, 0, 0, 0, time.UTC),
 			StartTime:   time.Date(2024, 10, 15, 18, 0, 0, 0, time.UTC),
-			EndTime:     Ref(time.Date(2024, 10, 15, 21, 0, 0, 0, time.UTC)),
-			Price:       Ref(700),
+			EndTime:     common.Ref(time.Date(2024, 10, 15, 21, 0, 0, 0, time.UTC)),
+			Price:       common.Ref(700),
 			IsFree:      false,
-			GameLevel:   Ref(GameLevelMidPlus),
-			Capacity:    Ref(22),
+			GameLevel:   common.Ref(models.GameLevelMidPlus),
+			Capacity:    common.Ref(22),
 			Busy:        0,
 			Subscribers: nil,
 			PreviewURL:  "http://127.0.0.1:8080/img/default_football.jpeg",
 			PhotoURLs:   nil,
 		},
-		Description: Ref("Половину тренировки отрабатываем схему 4-4-2, вторая половина игровая"),
+		Description: common.Ref("Половину тренировки отрабатываем схему 4-4-2, вторая половина игровая"),
 		RawMessage:  nil,
 	},
 	{
-		ShortEvent: ShortEvent{
+		ShortEvent: models.ShortEvent{
 			ID:          uuid.New(),
-			SportType:   TypeFootball,
+			SportType:   models.TypeFootball,
 			Address:     "г. Москва Госпитальный пер. 4/6 стр. 3",
 			Date:        time.Date(2024, 10, 15, 0, 0, 0, 0, time.UTC),
 			StartTime:   time.Date(2024, 10, 15, 20, 0, 0, 0, time.UTC),
 			EndTime:     nil,
-			Price:       Ref(1000),
+			Price:       common.Ref(1000),
 			IsFree:      false,
-			GameLevel:   Ref(GameLevelMid),
+			GameLevel:   common.Ref(models.GameLevelMid),
 			Capacity:    nil,
 			Busy:        0,
 			Subscribers: nil,
 			PreviewURL:  "http://127.0.0.1:8080/img/default_football.jpeg",
 			PhotoURLs:   nil,
 		},
-		Description: Ref("Сегодня чисто игровая тренировка. Вход с улицы напротив школы. На проходной скажите, что на игру"),
-		RawMessage:  nil,
+		Description: common.Ref("Сегодня чисто игровая тренировка. " +
+			"Вход с улицы напротив школы. На проходной скажите, что на игру"),
+		RawMessage: nil,
 	},
 }
 
@@ -111,7 +104,7 @@ func (s *SimpleEventStorage) FillSimpleEventStorage() error {
 
 var ErrEventAlreadyExist = errors.New("event already exists")
 
-func (s *SimpleEventStorage) AddEvent(event FullEvent) error {
+func (s *SimpleEventStorage) AddEvent(event models.FullEvent) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -124,11 +117,11 @@ func (s *SimpleEventStorage) AddEvent(event FullEvent) error {
 	return nil
 }
 
-func (s *SimpleEventStorage) GetEvents() ([]ShortEvent, error) {
+func (s *SimpleEventStorage) GetEvents() ([]models.ShortEvent, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	events := make([]ShortEvent, 0)
+	events := make([]models.ShortEvent, 0)
 	for _, v := range s.m {
 		events = append(events, v.ShortEvent)
 	}
@@ -142,7 +135,7 @@ func (s *SimpleEventStorage) GetEvents() ([]ShortEvent, error) {
 
 var ErrNotFoundEvent = errors.New("not found event")
 
-func (s *SimpleEventStorage) GetEvent(id uuid.UUID) (*FullEvent, error) {
+func (s *SimpleEventStorage) GetEvent(id uuid.UUID) (*models.FullEvent, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -154,7 +147,11 @@ func (s *SimpleEventStorage) GetEvent(id uuid.UUID) (*FullEvent, error) {
 	return &event, nil
 }
 
-func (s *SimpleEventStorage) SubscribeEvent(id uuid.UUID, userID uuid.UUID, subscribe bool) (*ResponseSubscribeEvent, error) {
+func (s *SimpleEventStorage) SubscribeEvent(
+	id uuid.UUID,
+	userID uuid.UUID,
+	subscribe bool,
+) (*models.ResponseSubscribeEvent, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -171,7 +168,9 @@ func (s *SimpleEventStorage) SubscribeEvent(id uuid.UUID, userID uuid.UUID, subs
 
 		s.m[id] = event
 
-		return &ResponseSubscribeEvent{ID: event.ID, Subscribers: subscribes, Capacity: event.Capacity, Busy: event.Busy}, nil
+		return &models.ResponseSubscribeEvent{
+			ID: event.ID, Subscribers: subscribes, Capacity: event.Capacity, Busy: event.Busy,
+		}, nil
 	}
 
 	subscribes, err := event.RemoveSubscriber(userID)
@@ -181,5 +180,7 @@ func (s *SimpleEventStorage) SubscribeEvent(id uuid.UUID, userID uuid.UUID, subs
 
 	s.m[id] = event
 
-	return &ResponseSubscribeEvent{ID: event.ID, Subscribers: subscribes, Capacity: event.Capacity, Busy: event.Busy}, nil
+	return &models.ResponseSubscribeEvent{
+		ID: event.ID, Subscribers: subscribes, Capacity: event.Capacity, Busy: event.Busy,
+	}, nil
 }

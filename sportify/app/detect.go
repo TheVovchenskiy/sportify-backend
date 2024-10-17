@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ var (
 	errMatchingError     = fmt.Errorf("Error matching regular expression")
 
 	// FIXME: fix possible regex injections
-	sportEventRegExps = []string{
+	SportEventRegExps = []string{
 		`(?:манеж|стадион|метро|парк|поле).*?(?:«[^»]+»|".+?"|[А-ЯЁа-яё]+)`,                                                           // place
 		`(?:\d{1,2}\s*(?:января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)|\d{1,2}.\d{1,2}.\d{2,4})`, // date
 		`\d{1,2}:\d{2}(?:-\d{1,2}:\d{2})?`,                                       // time
@@ -38,8 +38,8 @@ var (
 	}
 )
 
-// detect checks if a string satisfies a specified number of regular expressions.
-func detect(text string, regexps []string, minMatches int) (bool, error) {
+// DetectEventMessage checks if a string satisfies a specified number of regular expressions.
+func (a *App) DetectEventMessage(text string, regexps []string, minMatches int) (bool, error) {
 	if minMatches < 0 {
 		return false, fmt.Errorf("%w: must be >= 0", errInvalidMinMatches)
 	}
