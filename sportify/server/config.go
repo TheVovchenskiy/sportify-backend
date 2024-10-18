@@ -1,13 +1,14 @@
 package server
 
 import (
-	"errors"
-	"flag"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/spf13/viper"
 )
+
+var once = sync.Once{}
 
 type Config struct {
 	ProductionMode  bool
@@ -22,26 +23,17 @@ type Config struct {
 	LoggerErrOutput []string
 }
 
-func NewConfig() (*Config, error) {
-	filePath := flag.String(
-		"configfile",
-		"",
-		"you should use file path to config file. NOT SECURE example: ./config.example.yaml",
-	)
-	flag.Parse()
+func NewConfig(configFile string) (*Config, error) {
+	once.Do(func() {
+		viper.SetConfigName(configFile)
+		viper.SetConfigType("yaml")
+		viper.AddConfigPath("../config")
 
-	if filePath == nil {
-		return nil, errors.New("flag configfile is nil")
-	}
-
-	viper.SetConfigName(*filePath)
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath("../config")
-
-	err := viper.ReadInConfig()
-	if err != nil {
-		return nil, fmt.Errorf("read config: %w", err)
-	}
+		err := viper.ReadInConfig()
+		if err != nil {
+			panic(fmt.Errorf("read config: %w", err))
+		}
+	})
 
 	return &Config{
 		ProductionMode:  viper.GetBool("production_mode"),

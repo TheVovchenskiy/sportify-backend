@@ -2,7 +2,10 @@ package server
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/TheVovchenskiy/sportify-backend/api"
 	"github.com/TheVovchenskiy/sportify-backend/app"
@@ -13,7 +16,9 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-func runTgHandler(ctx context.Context, cfg *Config, handler api.Handler, logger *mylogger.MyLogger) error {
+const basicTimeout = 10 * time.Second
+
+func (s *Server) runTgHandler(ctx context.Context, cfg *Config, handler api.Handler, logger *mylogger.MyLogger) error {
 	r := chi.NewRouter()
 	r.Route(cfg.APIPrefix, func(r chi.Router) {
 		r.Use(middleware.Recoverer)
@@ -22,17 +27,34 @@ func runTgHandler(ctx context.Context, cfg *Config, handler api.Handler, logger 
 		r.Post("/message", handler.TryCreateEvent)
 	})
 
-	logger.WithCtx(ctx).Infof("listen bot input %s\n", cfg.PortTg)
+	s.serverTg = http.Server{ //nolint:exhaustruct
+		Addr:                         cfg.PortTg,
+		Handler:                      r,
+		DisableGeneralOptionsHandler: false,
+		ReadTimeout:                  basicTimeout,
+		WriteTimeout:                 basicTimeout,
+	}
 
-	return http.ListenAndServe(cfg.PortTg, r)
+	logger.WithCtx(ctx).Infof("listen bot input %s\n", cfg.PortTg)
+	if err := s.serverTg.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		return err
+	}
+
+	return nil
 }
 
 type Server struct {
-	httpServer http.Server
+	serverPublic http.Server
+	serverTg     http.Server
+	configFile   string
+	logger       *mylogger.MyLogger
 }
 
-func (s *Server) Run(ctx context.Context) error {
-	cfg, err := NewConfig()
+//nolint:funlen
+func (s *Server) Run(ctx context.Context, configFile string) error {
+	s.configFile = configFile
+
+	cfg, err := NewConfig(configFile)
 	if err != nil {
 		return err
 	}
@@ -41,6 +63,9 @@ func (s *Server) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	defer logger.Sync()
+	s.logger = logger
 
 	simpleEventStorage, err := db.NewSimpleEventStorage()
 	if err != nil {
@@ -70,14 +95,21 @@ func (s *Server) Run(ctx context.Context) error {
 	})
 
 	go func() {
-		if err := runTgHandler(ctx, cfg, handler, logger); err != nil {
+		if err := s.runTgHandler(ctx, cfg, handler, logger); err != nil {
 			logger.WithCtx(ctx).Error(err)
 		}
 	}()
 
-	logger.WithCtx(ctx).Infof("listen %s\n", cfg.PortPublic)
+	s.serverPublic = http.Server{ //nolint:exhaustruct
+		Addr:                         cfg.PortPublic,
+		Handler:                      r,
+		DisableGeneralOptionsHandler: false,
+		ReadTimeout:                  basicTimeout,
+		WriteTimeout:                 basicTimeout,
+	}
 
-	if err := http.ListenAndServe(cfg.PortPublic, r); err != nil {
+	logger.WithCtx(ctx).Infof("listen %s\n", cfg.PortPublic)
+	if err := s.serverPublic.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
 
@@ -85,14 +117,23 @@ func (s *Server) Run(ctx context.Context) error {
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
-	return s.httpServer.Shutdown(ctx) //nolint:wrapcheck
-}
+	s.logger.WithCtx(ctx).Infof("shotdown server")
 
-func (s *Server) ReRun(ctx context.Context) error {
-	err := s.Shutdown(ctx)
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, basicTimeout)
+	defer cancel()
+
+	err := s.serverPublic.Shutdown(ctxWithTimeout)
 	if err != nil {
-		return err
+		return fmt.Errorf("to shutdown server public: %w", err)
 	}
 
-	return s.Run(ctx)
+	ctxWithTimeoutTg, cancelTg := context.WithTimeout(ctx, basicTimeout)
+	defer cancelTg()
+
+	err = s.serverTg.Shutdown(ctxWithTimeoutTg)
+	if err != nil {
+		return fmt.Errorf("to shutdown server tg: %w", err)
+	}
+
+	return nil
 }

@@ -2,26 +2,27 @@ package main
 
 import (
 	"context"
+	"flag"
 
 	"github.com/TheVovchenskiy/sportify-backend/server"
-
-	"github.com/fsnotify/fsnotify"
-	"github.com/spf13/viper"
 )
 
 func main() {
+	configFile := flag.String(
+		"configfile",
+		"",
+		"you should use file path to config file. NOT SECURE example: ./config.example.yaml",
+	)
+	flag.Parse()
+
+	if configFile == nil {
+		panic("flag --configfile is nil")
+	}
+
 	srv := server.Server{}
 	baseCtx := context.Background()
 
-	viper.OnConfigChange(func(_ fsnotify.Event) {
-		err := srv.ReRun(baseCtx)
-		if err != nil {
-			panic(err)
-		}
-	})
-	viper.WatchConfig()
-
-	if err := srv.Run(baseCtx); err != nil {
+	if err := srv.Run(baseCtx, *configFile); err != nil {
 		panic(err)
 	}
 }
