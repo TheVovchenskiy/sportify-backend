@@ -1,0 +1,26 @@
+INSERT INTO public.event (
+    id, creator_id, sport_type, address, date_start, start_time,
+    price, game_level, description, raw_message, capacity, creation_type,
+    url_preview, url_photos
+) VALUES
+      ('9bc13767-82d4-46e2-8dd8-51a5df1c7424', '0bc13767-82d4-46e2-8dd8-51a5df1c7426', 'football',
+       'г. Москва Госпитальный пер. 4/6 стр. 3', '2024-10-24 00:00:00',
+       '2024-10-24 20:00:00', 0, 'mid_minus',
+       'Приходите все! Чисто игровая тренировка',
+       '', NULL, 'site',
+       'http://127.0.0.1:8080/api/v1/img/default_football.jpeg',
+       '{"http://127.0.0.1:8080/api/v1/img/default_football.jpeg"}'),
+      ('9bc13767-82d4-46e2-8dd8-51a5df1c7427', '0bc13767-82d4-46e2-8dd8-51a5df1c7426', 'football',
+       'г. Москва Госпитальный пер. 4/6 стр. 3', '2024-10-25 00:00:00',
+       '2024-10-25 18:00:00', 700, 'mid_plus',
+       'Половину тренировки отрабатываем схему 4-4-2, вторая половина игровая',
+       '', 22, 'site',
+       'http://127.0.0.1:8080/api/v1/img/default_football.jpeg',
+       '{"http://127.0.0.1:8080/api/v1/img/default_football.jpeg"}'),
+      ('9bc13767-82d4-46e2-8dd8-51a5df1c7428', '0bc13767-82d4-46e2-8dd8-51a5df1c7426', 'football',
+       'г. Москва Госпитальный пер. 4/6 стр. 3', '2024-10-25 00:00:00',
+       '2024-10-25 20:00:00', 1000, 'mid',
+       'Сегодня чисто игровая тренировка. Вход с улицы напротив школы. На проходной скажите, что на игру',
+       '', 0, 'site',
+       'http://127.0.0.1:8080/api/v1/img/default_football.jpeg',
+       '{"http://127.0.0.1:8080/api/v1/img/default_football.jpeg"}');

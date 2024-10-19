@@ -1,8 +1,17 @@
-package app
+package app_test
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/TheVovchenskiy/sportify-backend/app"
+	"github.com/TheVovchenskiy/sportify-backend/app/mocks"
+
+	"go.uber.org/mock/gomock"
+)
 
 func TestDetect(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		name string
 		text string
@@ -71,7 +80,14 @@ https://footballvmoskve.ru/`,
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual, err := Detect(tc.text, SportEventRegExps, 3)
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			appSportify := app.NewApp(mocks.NewMockEventStorage(ctrl))
+
+			actual, err := appSportify.DetectEventMessage(tc.text, app.SportEventRegExps, 3)
 			if !actual {
 				t.Errorf("Did not return true, err: %q", err)
 			}

@@ -67,12 +67,12 @@ func (s *Server) Run(ctx context.Context, configFile string) error {
 	defer logger.Sync()
 	s.logger = logger
 
-	simpleEventStorage, err := db.NewSimpleEventStorage()
+	postgresStorage, err := db.NewPostgresStorage(ctx, cfg.URLDatabase)
 	if err != nil {
 		return err
 	}
 
-	handler := api.NewHandler(app.NewApp(simpleEventStorage), logger)
+	handler := api.NewHandler(app.NewApp(postgresStorage), logger)
 
 	r := chi.NewRouter()
 	r.Route(cfg.APIPrefix, func(r chi.Router) {
@@ -88,7 +88,7 @@ func (s *Server) Run(ctx context.Context, configFile string) error {
 				return
 			}
 
-			fs := http.StripPrefix("/img/", http.FileServer(http.Dir(cfg.PathPhotos)))
+			fs := http.StripPrefix(cfg.APIPrefix+"img/", http.FileServer(http.Dir(cfg.PathPhotos)))
 
 			fs.ServeHTTP(w, r)
 		})

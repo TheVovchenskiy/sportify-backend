@@ -1,0 +1,14 @@
+FROM python:3.13.0-alpine3.20
+
+ARG CONFIG_FILE
+
+WORKDIR var/bot
+
+COPY ${CONFIG_FILE} config.yaml
+COPY requirements.txt .
+COPY bot .
+
+RUN pip install --no-cache-dir -r requirements.txt
+RUN ls -al
+
+CMD ["python", "main.py", "config.yaml"]

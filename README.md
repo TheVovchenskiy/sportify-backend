@@ -13,7 +13,29 @@ go version
 ```
 Вывод примерно такой: go version go1.23.0 linux/amd64
 
-Для запуска бэка на порту 8080: 
+Установка всего тулчейна:
 ```shell
-cd sportify && go run .
+make toolchain
+```
+
+Сборка c помощью Makefile или вручную исполняя команды
+```shell
+export CONFIG_FILE=config/config.example.yaml && \
+export POSTGRES_ENV_FILE=config/postgres.env && \
+make docker-compose-up
+```
+
+Для накатки миграций:
+```shell
+migrate -database postgres://postgres:postgres@localhost:5432/sportify?sslmode=disable -path ./sportify/db/migrations up
+```
+
+Для заполнения бд можно вручную исполнить из IDE [sql запрос](sportify/db/fill.sql) или 
+зайти в контейнер бд (docker exec -it deploy-postgres-1 psql -U postgres),
+а там уже запустить скрипт.
+
+Для запуска чисто бэка(без бд) на локалке:
+```shell
+export CONFIG_FILE=config/config.example.yaml && \
+cd sportify && go run . -configfile=config.example
 ```

@@ -1,7 +1,6 @@
 package models
 
 import (
-	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -11,10 +10,17 @@ type TgMessage struct {
 	RawMessage string `json:"text"`
 }
 
+type CreationType string
+
 const (
-	TypeVolleyball SportType = "volleyball"
-	TypeBasketball SportType = "basketball"
-	TypeFootball   SportType = "football"
+	CreationTypeTg   CreationType = "tg"
+	CreationTypeSite CreationType = "site"
+)
+
+const (
+	SportTypeVolleyball SportType = "volleyball"
+	SportTypeBasketball SportType = "basketball"
+	SportTypeFootball   SportType = "football"
 )
 
 type SportType string
@@ -31,12 +37,16 @@ type GameLevel string
 
 type FullEvent struct {
 	ShortEvent
-	Description *string `json:"description"`
-	RawMessage  *string `json:"raw_message"`
+	URLAuthor    *string
+	URLMessage   *string
+	CreationType CreationType
+	Description  *string `json:"description"`
+	RawMessage   *string `json:"raw_message"`
 }
 
 type ShortEvent struct {
 	ID          uuid.UUID   `json:"id"`
+	CreatorID   uuid.UUID   `json:"creator_id"`
 	SportType   SportType   `json:"sport_type"`
 	Address     string      `json:"address"`
 	Date        time.Time   `json:"date"`
@@ -48,36 +58,6 @@ type ShortEvent struct {
 	Capacity    *int        `json:"capacity"`
 	Busy        int         `json:"busy"`
 	Subscribers []uuid.UUID `json:"subscribers_id"`
-	PreviewURL  string      `json:"preview"`
-	PhotoURLs   []string    `json:"photos"`
-}
-
-var (
-	ErrAllBusy            = errors.New("все места заняты")
-	ErrNotFoundSubscriber = errors.New("не найден подписчик события")
-)
-
-func (s *ShortEvent) AddSubscriber(id uuid.UUID) ([]uuid.UUID, error) {
-	if s.Capacity != nil && *s.Capacity <= s.Busy {
-		return s.Subscribers, ErrAllBusy
-	}
-
-	s.Subscribers = append(s.Subscribers, id)
-	s.Busy = len(s.Subscribers)
-
-	return s.Subscribers, nil
-}
-
-func (s *ShortEvent) RemoveSubscriber(id uuid.UUID) ([]uuid.UUID, error) {
-	for i, v := range s.Subscribers {
-		if v == id {
-			s.Subscribers = append(s.Subscribers[:i], s.Subscribers[i+1:]...)
-
-			s.Busy = len(s.Subscribers)
-
-			return s.Subscribers, nil
-		}
-	}
-
-	return s.Subscribers, ErrNotFoundSubscriber
+	URLPreview  string      `json:"preview"`
+	URLPhotos   []string    `json:"photos"`
 }

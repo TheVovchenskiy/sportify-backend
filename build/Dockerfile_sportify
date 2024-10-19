@@ -1,0 +1,31 @@
+FROM golang:1.23-alpine3.20 as build
+
+WORKDIR /var/sportify
+
+RUN apk update
+RUN apk add --no-cache make
+
+COPY sportify .
+
+COPY Makefile .
+RUN make toolchain
+
+
+RUN go build -o main ./main.go
+
+#=========================================================================================
+FROM alpine:3.20 as production
+
+ARG CONFIG_FILE
+
+WORKDIR /var/sportify
+
+COPY --from=build /go/bin/migrate /var/message/migrate
+COPY --from=build /var/sportify/main main
+
+COPY ${CONFIG_FILE} /var/config/config.yaml
+
+EXPOSE 8080
+EXPOSE 8090
+
+ENTRYPOINT ./main -configfile config.yaml

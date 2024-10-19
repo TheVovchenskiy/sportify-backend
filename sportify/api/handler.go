@@ -23,10 +23,10 @@ import (
 )
 
 type App interface {
-	AddEvent(event models.FullEvent) error
-	GetEvents() ([]models.ShortEvent, error)
-	GetEvent(id uuid.UUID) (*models.FullEvent, error)
-	SubscribeEvent(id uuid.UUID, userID uuid.UUID, subscribe bool) (*models.ResponseSubscribeEvent, error)
+	AddEvent(ctx context.Context, event models.FullEvent) error
+	GetEvents(ctx context.Context) ([]models.ShortEvent, error)
+	GetEvent(ctx context.Context, id uuid.UUID) (*models.FullEvent, error)
+	SubscribeEvent(ctx context.Context, d uuid.UUID, userID uuid.UUID, subscribe bool) (*models.ResponseSubscribeEvent, error)
 	DetectEventMessage(text string, regexps []string, minMatches int) (bool, error)
 }
 
@@ -49,7 +49,7 @@ func (h *Handler) handleGetEventsError(ctx context.Context, w http.ResponseWrite
 func (h *Handler) GetEvents(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	events, err := h.app.GetEvents()
+	events, err := h.app.GetEvents(ctx)
 	if err != nil {
 		h.handleGetEventsError(ctx, w, err)
 		return
@@ -84,7 +84,7 @@ func (h *Handler) GetEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	event, err := h.app.GetEvent(eventID)
+	event, err := h.app.GetEvent(ctx, eventID)
 	if err != nil {
 		h.handleGetEventError(ctx, w, err)
 		return
@@ -107,6 +107,8 @@ func (h *Handler) handleSubscribeEventErr(ctx context.Context, w http.ResponseWr
 		models.WriteResponseError(w, models.NewResponseBadRequest("", db.ErrNotFoundEvent.Error()))
 	case errors.Is(errOutside, models.ErrAllBusy):
 		models.WriteResponseError(w, models.NewResponseBadRequest("", models.ErrAllBusy.Error()))
+	case errors.Is(errOutside, models.ErrFoundSubscriber):
+		models.WriteResponseError(w, models.NewResponseBadRequest("", models.ErrFoundSubscriber.Error()))
 	case errors.Is(errOutside, models.ErrNotFoundSubscriber):
 		models.WriteResponseError(w, models.NewResponseBadRequest("", models.ErrNotFoundSubscriber.Error()))
 	default:
@@ -141,7 +143,7 @@ func (h *Handler) SubscribeEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responseSubscribeEvent, err := h.app.SubscribeEvent(eventID, reqSubEvent.UserID, reqSubEvent.SubscribeFlag)
+	responseSubscribeEvent, err := h.app.SubscribeEvent(ctx, eventID, reqSubEvent.UserID, reqSubEvent.SubscribeFlag)
 	if err != nil {
 		h.handleSubscribeEventErr(ctx, w, err)
 		return
@@ -215,8 +217,8 @@ func eventFromYaGPT(text []byte) (*models.FullEvent, error) {
 	result.Address = eventYa.Location
 	result.ID = uuid.New()
 	result.Price = common.Ref(eventYa.Cost)
-	result.SportType = models.TypeFootball
-	result.PreviewURL = "http://127.0.0.1:8080/img/default_football.jpeg"
+	result.SportType = models.SportTypeFootball
+	result.URLPreview = "http://127.0.0.1:8080/img/default_football.jpeg"
 
 	return &result, nil
 }
@@ -298,7 +300,7 @@ func (h *Handler) TryCreateEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.app.AddEvent(*fullEvent)
+	err = h.app.AddEvent(ctx, *fullEvent)
 	if err != nil {
 		h.handleGetEventError(ctx, w, err)
 		return

@@ -2,7 +2,10 @@ package models
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
+
+	"github.com/TheVovchenskiy/sportify-backend/pkg/common"
 
 	"github.com/google/uuid"
 )
@@ -30,6 +33,44 @@ type ResponseSubscribeEvent struct {
 	Capacity    *int        `json:"capacity"`
 	Busy        int         `json:"busy"`
 	Subscribers []uuid.UUID `json:"subscribers_id"`
+}
+
+var (
+	ErrAllBusy            = errors.New("все места заняты")
+	ErrFoundSubscriber    = errors.New("вы уже подписаны на это событие")
+	ErrNotFoundSubscriber = errors.New("не найден подписчик события")
+)
+
+func (r *ResponseSubscribeEvent) AddSubscriber(id uuid.UUID) error {
+	if r.Capacity != nil && *r.Capacity <= r.Busy {
+		return ErrAllBusy
+	}
+
+	_, isFound := common.Find(r.Subscribers, func(item uuid.UUID) bool {
+		return item == id
+	})
+	if isFound {
+		return ErrFoundSubscriber
+	}
+
+	r.Subscribers = append(r.Subscribers, id)
+	r.Busy = len(r.Subscribers)
+
+	return nil
+}
+
+func (r *ResponseSubscribeEvent) RemoveSubscriber(id uuid.UUID) error {
+	for i, v := range r.Subscribers {
+		if v == id {
+			r.Subscribers = append(r.Subscribers[:i], r.Subscribers[i+1:]...)
+
+			r.Busy = len(r.Subscribers)
+
+			return nil
+		}
+	}
+
+	return ErrNotFoundSubscriber
 }
 
 type ResponseErr struct {

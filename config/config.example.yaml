@@ -1,4 +1,5 @@
-api_url: "http://localhost:8090/message"
+api_url: "http://sportify:8090/message"
+bot_token: "example_bot_token"
 
 # sportify
 production_mode: true
@@ -8,6 +9,6 @@ api_prefix: "/api/v1/"
 path_photos: "./photos"
 folder_id: "example_folder_id"
 iam_token: "example_iam_toker"
-url_database: "example_url_database"
+url_database: "postgres://postgres:postgres@localhost:5432/sportify?sslmode=disable"
 logger_output: "stdout"
 logger_err_output: "stderr"
