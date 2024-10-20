@@ -20,9 +20,26 @@ type PostgresStorage struct {
 
 var ErrEventAlreadyExist = errors.New("событие уже существует")
 
-func (p *PostgresStorage) AddEvent(ctx context.Context, event models.FullEvent) error {
-	//TODO implement me
-	panic("implement me")
+func (p *PostgresStorage) CreateEvent(ctx context.Context, event *models.FullEvent) error {
+	sqlInsertEvent := `
+	INSERT INTO "public".event (
+    id, creator_id, subscriber_ids, sport_type, address, date_start, start_time, end_time,
+    price, game_level, description, raw_message, capacity, busy, creation_type,
+    url_message, url_author, url_preview, url_photos
+) VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, 
+          $9, $10, $11, $12, $13, $14, $15,
+          $16, $17, $18, $19);`
+
+	_, err := p.pool.Exec(ctx, sqlInsertEvent,
+		event.ID, event.CreatorID, event.Subscribers, event.SportType, event.Address,
+		event.Date, event.StartTime, event.EndTime, event.Price, event.GameLevel,
+		event.Description, event.RawMessage, event.Capacity, event.Busy, event.CreationType,
+		event.URLMessage, event.URLAuthor, event.URLPreview, event.URLPhotos)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 var ErrNotFoundEvent = errors.New("не найдено событие")

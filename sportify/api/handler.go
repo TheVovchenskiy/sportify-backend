@@ -23,10 +23,15 @@ import (
 )
 
 type App interface {
-	AddEvent(ctx context.Context, event models.FullEvent) error
+	CreateEventSite(ctx context.Context, event *models.RequestEventCreateSite) (*models.FullEvent, error)
 	GetEvents(ctx context.Context) ([]models.ShortEvent, error)
 	GetEvent(ctx context.Context, id uuid.UUID) (*models.FullEvent, error)
-	SubscribeEvent(ctx context.Context, d uuid.UUID, userID uuid.UUID, subscribe bool) (*models.ResponseSubscribeEvent, error)
+	SubscribeEvent(
+		ctx context.Context,
+		id uuid.UUID,
+		userID uuid.UUID,
+		subscribe bool,
+	) (*models.ResponseSubscribeEvent, error)
 	DetectEventMessage(text string, regexps []string, minMatches int) (bool, error)
 }
 
@@ -93,7 +98,7 @@ func (h *Handler) GetEvent(w http.ResponseWriter, r *http.Request) {
 	models.WriteJSONResponse(w, event)
 }
 
-var ErrRequestSubscribeEvent = errors.New("не корректный запрос subscribe event")
+var ErrRequestSubscribeEvent = errors.New("некорректный запрос подписки на событие")
 
 func (h *Handler) handleSubscribeEventErr(ctx context.Context, w http.ResponseWriter, errOutside error) {
 	h.logger.WithCtx(ctx).Error(errOutside)
@@ -102,7 +107,7 @@ func (h *Handler) handleSubscribeEventErr(ctx context.Context, w http.ResponseWr
 	case errors.Is(errOutside, ErrInvalidEventID):
 		models.WriteResponseError(w, models.NewResponseBadRequest("", ErrInvalidEventID.Error()))
 	case errors.Is(errOutside, ErrRequestSubscribeEvent):
-		models.WriteResponseError(w, models.NewResponseBadRequest("", ErrRequestSubscribeEvent.Error()))
+		models.WriteResponseError(w, models.NewResponseBadRequest("", errOutside.Error()))
 	case errors.Is(errOutside, db.ErrNotFoundEvent):
 		models.WriteResponseError(w, models.NewResponseBadRequest("", db.ErrNotFoundEvent.Error()))
 	case errors.Is(errOutside, models.ErrAllBusy):
@@ -137,7 +142,7 @@ func (h *Handler) SubscribeEvent(w http.ResponseWriter, r *http.Request) {
 	var reqSubEvent models.RequestSubscribeEvent
 	err = json.Unmarshal(reqBody, &reqSubEvent)
 	if err != nil {
-		err = fmt.Errorf("%s: %w", err.Error(), ErrRequestSubscribeEvent)
+		err = fmt.Errorf("%w: %s", ErrRequestSubscribeEvent, err.Error())
 
 		h.handleSubscribeEventErr(ctx, w, err)
 		return
@@ -300,11 +305,54 @@ func (h *Handler) TryCreateEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.app.AddEvent(ctx, *fullEvent)
+	fmt.Println(fullEvent)
+	// TODO add CreateEventTg
+	//err = h.app.AddEvent(ctx, *fullEvent)
+	//if err != nil {
+	//	h.handleGetEventError(ctx, w, err)
+	//	return
+	//}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) handleCreateEventSiteError(ctx context.Context, w http.ResponseWriter, errOutside error) {
+	h.logger.WithCtx(ctx).Error(errOutside)
+
+	switch {
+	case errors.Is(errOutside, ErrRequestEventCreateSite):
+		models.WriteResponseError(w, models.NewResponseBadRequest("", errOutside.Error()))
+	default:
+		models.WriteResponseError(w, models.NewResponseInternalServerErr("", models.InternalServerErrMessage))
+	}
+}
+
+var ErrRequestEventCreateSite = errors.New("некорректный запрос на создание события")
+
+func (h *Handler) CreateEventSite(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		h.handleGetEventError(ctx, w, err)
+		h.handleCreateEventSiteError(ctx, w, err)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	var requestEventCreate models.RequestEventCreateSite
+
+	err = json.Unmarshal(body, &requestEventCreate)
+	if err != nil {
+		errOutside := fmt.Errorf("%w: %s", ErrRequestEventCreateSite, err.Error())
+
+		h.handleCreateEventSiteError(ctx, w, errOutside)
+		return
+	}
+
+	fullEvent, err := h.app.CreateEventSite(ctx, &requestEventCreate)
+	if err != nil {
+		h.handleCreateEventSiteError(ctx, w, err)
+		return
+	}
+
+	models.WriteJSONResponse(w, fullEvent)
 }

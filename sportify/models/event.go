@@ -61,3 +61,7 @@ type ShortEvent struct {
 	URLPreview  string      `json:"preview"`
 	URLPhotos   []string    `json:"photos"`
 }
+
+func IsFreePrice(price *int) bool {
+	return price == nil || *price == 0
+}
