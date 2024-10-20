@@ -20,3 +20,7 @@ docker-compose-up:
 .PHONY: docker-compose-down
 docker-compose-down:
 	docker compose -f deploy/docker-compose.yaml down
+
+.PHONY: docker-compose-build
+docker-compose-build:
+	docker compose -f deploy/docker-compose.yaml build

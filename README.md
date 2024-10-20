@@ -21,7 +21,7 @@ make toolchain
 Сборка c помощью Makefile или вручную исполняя команды
 ```shell
 export CONFIG_FILE=config/config.example.yaml && \
-export POSTGRES_ENV_FILE=config/postgres.env && \
+export POSTGRES_ENV_FILE=../config/postgres.example.env && \
 make docker-compose-up
 ```
 
@@ -31,11 +31,16 @@ migrate -database postgres://postgres:postgres@localhost:5432/sportify?sslmode=d
 ```
 
 Для заполнения бд можно вручную исполнить из IDE [sql запрос](sportify/db/fill.sql) или 
-зайти в контейнер бд (docker exec -it deploy-postgres-1 psql -U postgres),
+зайти в контейнер бд (docker exec -it deploy-postgres-1 psql -U postgres -d sportify),
 а там уже запустить скрипт.
 
 Для запуска чисто бэка(без бд) на локалке:
 ```shell
 export CONFIG_FILE=config/config.example.yaml && \
 cd sportify && go run . -configfile=config.example
+```
+
+Для пересборки проекта после изменений:
+```shell
+make docker-compose-build
 ```
