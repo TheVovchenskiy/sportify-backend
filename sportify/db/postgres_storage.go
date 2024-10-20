@@ -42,6 +42,26 @@ func (p *PostgresStorage) CreateEvent(ctx context.Context, event *models.FullEve
 	return nil
 }
 
+func (p *PostgresStorage) EditEvent(ctx context.Context, event *models.FullEvent) error {
+	sqlUpdateEvent := `
+	UPDATE "public".event SET creator_id = $1, sport_type = $2, address = $3, 
+		date_start = $4, start_time = $5, end_time = $6, price = $7, game_level = $8,
+		description = $9, capacity = $10, creation_type = $11, url_message = $12, 
+		url_author = $13, url_preview = $14, url_photos = $15
+		WHERE id = $16 AND deleted_at IS NULL;`
+
+	_, err := p.pool.Exec(ctx, sqlUpdateEvent,
+		event.CreatorID, event.SportType, event.Address,
+		event.Date, event.StartTime, event.EndTime, event.Price, event.GameLevel,
+		event.Description, event.Capacity, event.CreationType, event.URLMessage,
+		event.URLAuthor, event.URLPreview, event.URLPhotos, event.ID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 var ErrNotFoundEvent = errors.New("не найдено событие")
 
 func (p *PostgresStorage) GetEvent(ctx context.Context, eventID uuid.UUID) (*models.FullEvent, error) {

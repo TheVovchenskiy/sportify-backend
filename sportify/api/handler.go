@@ -15,15 +15,16 @@ import (
 	"github.com/TheVovchenskiy/sportify-backend/app"
 	"github.com/TheVovchenskiy/sportify-backend/db"
 	"github.com/TheVovchenskiy/sportify-backend/models"
+	"github.com/TheVovchenskiy/sportify-backend/pkg/api"
 	"github.com/TheVovchenskiy/sportify-backend/pkg/common"
 	"github.com/TheVovchenskiy/sportify-backend/pkg/mylogger"
 
-	chi "github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
 
 type App interface {
-	CreateEventSite(ctx context.Context, event *models.RequestEventCreateSite) (*models.FullEvent, error)
+	CreateEventSite(ctx context.Context, request *models.RequestEventCreateSite) (*models.FullEvent, error)
+	EditEventSite(ctx context.Context, request *models.RequestEventEditSite) (*models.FullEvent, error)
 	GetEvents(ctx context.Context) ([]models.ShortEvent, error)
 	GetEvent(ctx context.Context, id uuid.UUID) (*models.FullEvent, error)
 	SubscribeEvent(
@@ -46,6 +47,102 @@ func NewHandler(app App, logger *mylogger.MyLogger) Handler {
 	return Handler{app: app, logger: logger}
 }
 
+func (h *Handler) handleCreateEventSiteError(ctx context.Context, w http.ResponseWriter, errOutside error) {
+	h.logger.WithCtx(ctx).Error(errOutside)
+
+	switch {
+	case errors.Is(errOutside, ErrRequestEventCreateSite):
+		models.WriteResponseError(w, models.NewResponseBadRequestErr("", errOutside.Error()))
+	default:
+		models.WriteResponseError(w, models.NewResponseInternalServerErr("", models.InternalServerErrMessage))
+	}
+}
+
+var ErrRequestEventCreateSite = errors.New("некорректный запрос на создание события")
+
+func (h *Handler) CreateEventSite(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		h.handleCreateEventSiteError(ctx, w, err)
+		return
+	}
+
+	var requestEventCreate models.RequestEventCreateSite
+
+	err = json.Unmarshal(body, &requestEventCreate)
+	if err != nil {
+		errOutside := fmt.Errorf("%w: %s", ErrRequestEventCreateSite, err.Error())
+
+		h.handleCreateEventSiteError(ctx, w, errOutside)
+		return
+	}
+
+	fullEvent, err := h.app.CreateEventSite(ctx, &requestEventCreate)
+	if err != nil {
+		h.handleCreateEventSiteError(ctx, w, err)
+		return
+	}
+
+	models.WriteJSONResponse(w, fullEvent)
+}
+
+func (h *Handler) handleEditEventSiteError(ctx context.Context, w http.ResponseWriter, errOutside error) {
+	h.logger.WithCtx(ctx).Error(errOutside)
+
+	switch {
+	case errors.Is(errOutside, db.ErrNotFoundEvent):
+		models.WriteResponseError(w, models.NewResponseNotFoundErr("", db.ErrNotFoundEvent.Error()))
+	case errors.Is(errOutside, api.ErrInvalidUUID):
+		models.WriteResponseError(w, models.NewResponseBadRequestErr("", errOutside.Error()))
+	case errors.Is(errOutside, app.ErrNotValidUser):
+		models.WriteResponseError(w, models.NewResponseBadRequestErr("", app.ErrNotValidUser.Error()))
+	case errors.Is(errOutside, ErrRequestEditEventSite):
+		models.WriteResponseError(w, models.NewResponseBadRequestErr("", errOutside.Error()))
+	default:
+		models.WriteResponseError(w, models.NewResponseInternalServerErr("", models.InternalServerErrMessage))
+	}
+}
+
+var ErrRequestEditEventSite = errors.New("некорректный запрос на редактирование события")
+
+func (h *Handler) EditEventSite(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	eventID, err := api.GetUUID(r, "id")
+	if err != nil {
+		h.handleEditEventSiteError(ctx, w, err)
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		h.handleEditEventSiteError(ctx, w, err)
+		return
+	}
+
+	var requestEventEdit models.RequestEventEditSite
+
+	err = json.Unmarshal(body, &requestEventEdit)
+	if err != nil {
+		errOutside := fmt.Errorf("%w: %s", ErrRequestEditEventSite, err.Error())
+
+		h.handleEditEventSiteError(ctx, w, errOutside)
+		return
+	}
+
+	requestEventEdit.EventID = eventID
+
+	fullEvent, err := h.app.EditEventSite(ctx, &requestEventEdit)
+	if err != nil {
+		h.handleEditEventSiteError(ctx, w, err)
+		return
+	}
+
+	models.WriteJSONResponse(w, fullEvent)
+}
+
 func (h *Handler) handleGetEventsError(ctx context.Context, w http.ResponseWriter, errOutside error) {
 	h.logger.WithCtx(ctx).Error(errOutside)
 	models.WriteResponseError(w, models.NewResponseInternalServerErr("", models.InternalServerErrMessage))
@@ -63,16 +160,14 @@ func (h *Handler) GetEvents(w http.ResponseWriter, r *http.Request) {
 	models.WriteJSONResponse(w, events)
 }
 
-var ErrInvalidEventID = errors.New("не верный event id")
-
 func (h *Handler) handleGetEventError(ctx context.Context, w http.ResponseWriter, errOutside error) {
 	h.logger.WithCtx(ctx).Error(errOutside)
 
 	switch {
-	case errors.Is(errOutside, ErrInvalidEventID):
-		models.WriteResponseError(w, models.NewResponseBadRequest("", ErrInvalidEventID.Error()))
 	case errors.Is(errOutside, db.ErrNotFoundEvent):
-		models.WriteResponseError(w, models.NewResponseBadRequest("", db.ErrNotFoundEvent.Error()))
+		models.WriteResponseError(w, models.NewResponseNotFoundErr("", db.ErrNotFoundEvent.Error()))
+	case errors.Is(errOutside, api.ErrInvalidUUID):
+		models.WriteResponseError(w, models.NewResponseBadRequestErr("", errOutside.Error()))
 	default:
 		models.WriteResponseError(w, models.NewResponseInternalServerErr("", models.InternalServerErrMessage))
 	}
@@ -80,11 +175,8 @@ func (h *Handler) handleGetEventError(ctx context.Context, w http.ResponseWriter
 
 func (h *Handler) GetEvent(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	preEventID := chi.URLParam(r, "id")
-
-	eventID, err := uuid.Parse(preEventID)
+	eventID, err := api.GetUUID(r, "id")
 	if err != nil {
-		err = fmt.Errorf("eventID %s: %w", err.Error(), ErrInvalidEventID)
 		h.handleGetEventError(ctx, w, err)
 		return
 	}
@@ -100,22 +192,22 @@ func (h *Handler) GetEvent(w http.ResponseWriter, r *http.Request) {
 
 var ErrRequestSubscribeEvent = errors.New("некорректный запрос подписки на событие")
 
-func (h *Handler) handleSubscribeEventErr(ctx context.Context, w http.ResponseWriter, errOutside error) {
+func (h *Handler) handleSubscribeEventError(ctx context.Context, w http.ResponseWriter, errOutside error) {
 	h.logger.WithCtx(ctx).Error(errOutside)
 
 	switch {
-	case errors.Is(errOutside, ErrInvalidEventID):
-		models.WriteResponseError(w, models.NewResponseBadRequest("", ErrInvalidEventID.Error()))
-	case errors.Is(errOutside, ErrRequestSubscribeEvent):
-		models.WriteResponseError(w, models.NewResponseBadRequest("", errOutside.Error()))
 	case errors.Is(errOutside, db.ErrNotFoundEvent):
-		models.WriteResponseError(w, models.NewResponseBadRequest("", db.ErrNotFoundEvent.Error()))
+		models.WriteResponseError(w, models.NewResponseNotFoundErr("", db.ErrNotFoundEvent.Error()))
+	case errors.Is(errOutside, api.ErrInvalidUUID):
+		models.WriteResponseError(w, models.NewResponseBadRequestErr("", errOutside.Error()))
+	case errors.Is(errOutside, ErrRequestSubscribeEvent):
+		models.WriteResponseError(w, models.NewResponseBadRequestErr("", errOutside.Error()))
 	case errors.Is(errOutside, models.ErrAllBusy):
-		models.WriteResponseError(w, models.NewResponseBadRequest("", models.ErrAllBusy.Error()))
+		models.WriteResponseError(w, models.NewResponseBadRequestErr("", models.ErrAllBusy.Error()))
 	case errors.Is(errOutside, models.ErrFoundSubscriber):
-		models.WriteResponseError(w, models.NewResponseBadRequest("", models.ErrFoundSubscriber.Error()))
+		models.WriteResponseError(w, models.NewResponseBadRequestErr("", models.ErrFoundSubscriber.Error()))
 	case errors.Is(errOutside, models.ErrNotFoundSubscriber):
-		models.WriteResponseError(w, models.NewResponseBadRequest("", models.ErrNotFoundSubscriber.Error()))
+		models.WriteResponseError(w, models.NewResponseBadRequestErr("", models.ErrNotFoundSubscriber.Error()))
 	default:
 		models.WriteResponseError(w, models.NewResponseInternalServerErr("", models.InternalServerErrMessage))
 	}
@@ -123,19 +215,16 @@ func (h *Handler) handleSubscribeEventErr(ctx context.Context, w http.ResponseWr
 
 func (h *Handler) SubscribeEvent(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	preEventID := chi.URLParam(r, "id")
 
-	eventID, err := uuid.Parse(preEventID)
+	eventID, err := api.GetUUID(r, "id")
 	if err != nil {
-		err = fmt.Errorf("eventID %s: %w", err.Error(), ErrInvalidEventID)
-
-		h.handleSubscribeEventErr(ctx, w, err)
+		h.handleSubscribeEventError(ctx, w, err)
 		return
 	}
 
 	reqBody, err := io.ReadAll(r.Body)
 	if err != nil {
-		h.handleSubscribeEventErr(ctx, w, err)
+		h.handleSubscribeEventError(ctx, w, err)
 		return
 	}
 
@@ -144,13 +233,13 @@ func (h *Handler) SubscribeEvent(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		err = fmt.Errorf("%w: %s", ErrRequestSubscribeEvent, err.Error())
 
-		h.handleSubscribeEventErr(ctx, w, err)
+		h.handleSubscribeEventError(ctx, w, err)
 		return
 	}
 
 	responseSubscribeEvent, err := h.app.SubscribeEvent(ctx, eventID, reqSubEvent.UserID, reqSubEvent.SubscribeFlag)
 	if err != nil {
-		h.handleSubscribeEventErr(ctx, w, err)
+		h.handleSubscribeEventError(ctx, w, err)
 		return
 	}
 
@@ -270,7 +359,7 @@ func (h *Handler) handleTryCreateEventErr(ctx context.Context, w http.ResponseWr
 
 	switch {
 	case errors.Is(errOutside, db.ErrEventAlreadyExist):
-		models.WriteResponseError(w, models.NewResponseBadRequest("", db.ErrEventAlreadyExist.Error()))
+		models.WriteResponseError(w, models.NewResponseBadRequestErr("", db.ErrEventAlreadyExist.Error()))
 	default:
 		models.WriteResponseError(w, models.NewResponseInternalServerErr("", models.InternalServerErrMessage))
 	}
@@ -314,45 +403,4 @@ func (h *Handler) TryCreateEvent(w http.ResponseWriter, r *http.Request) {
 	//}
 
 	w.WriteHeader(http.StatusOK)
-}
-
-func (h *Handler) handleCreateEventSiteError(ctx context.Context, w http.ResponseWriter, errOutside error) {
-	h.logger.WithCtx(ctx).Error(errOutside)
-
-	switch {
-	case errors.Is(errOutside, ErrRequestEventCreateSite):
-		models.WriteResponseError(w, models.NewResponseBadRequest("", errOutside.Error()))
-	default:
-		models.WriteResponseError(w, models.NewResponseInternalServerErr("", models.InternalServerErrMessage))
-	}
-}
-
-var ErrRequestEventCreateSite = errors.New("некорректный запрос на создание события")
-
-func (h *Handler) CreateEventSite(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		h.handleCreateEventSiteError(ctx, w, err)
-		return
-	}
-
-	var requestEventCreate models.RequestEventCreateSite
-
-	err = json.Unmarshal(body, &requestEventCreate)
-	if err != nil {
-		errOutside := fmt.Errorf("%w: %s", ErrRequestEventCreateSite, err.Error())
-
-		h.handleCreateEventSiteError(ctx, w, errOutside)
-		return
-	}
-
-	fullEvent, err := h.app.CreateEventSite(ctx, &requestEventCreate)
-	if err != nil {
-		h.handleCreateEventSiteError(ctx, w, err)
-		return
-	}
-
-	models.WriteJSONResponse(w, fullEvent)
 }

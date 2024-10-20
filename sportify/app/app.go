@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/TheVovchenskiy/sportify-backend/db"
@@ -12,6 +13,7 @@ import (
 
 type EventStorage interface {
 	CreateEvent(ctx context.Context, event *models.FullEvent) error
+	EditEvent(ctx context.Context, event *models.FullEvent) error
 	GetEvents(ctx context.Context) ([]models.ShortEvent, error)
 	GetEvent(ctx context.Context, id uuid.UUID) (*models.FullEvent, error)
 	SubscribeEvent(ctx context.Context, id uuid.UUID, userID uuid.UUID, subscribe bool) (*models.ResponseSubscribeEvent, error)
@@ -32,34 +34,43 @@ func NewApp(eventStorage EventStorage) *App {
 }
 
 func (a *App) CreateEventSite(ctx context.Context, request *models.RequestEventCreateSite) (*models.FullEvent, error) {
-	result := models.FullEvent{
-		ShortEvent: models.ShortEvent{
-			ID:          uuid.New(),
-			CreatorID:   request.UserID,
-			SportType:   request.CreateEvent.SportType,
-			Address:     request.CreateEvent.Address,
-			Date:        request.CreateEvent.Date,
-			StartTime:   request.CreateEvent.StartTime,
-			EndTime:     request.CreateEvent.EndTime,
-			Price:       request.CreateEvent.Price,
-			IsFree:      models.IsFreePrice(request.CreateEvent.Price),
-			GameLevel:   request.CreateEvent.GameLevel,
-			Capacity:    request.CreateEvent.Capacity,
-			Busy:        0,
-			Subscribers: make([]uuid.UUID, 0),
-			URLPreview:  request.CreateEvent.URLPreview,
-			URLPhotos:   request.CreateEvent.URLPhotos,
-		},
-		CreationType: models.CreationTypeSite,
-		Description:  request.CreateEvent.Description,
-	}
+	result := models.NewFullEventSite(uuid.New(), request.UserID, &request.CreateEvent)
 
-	err := a.eventStorage.CreateEvent(ctx, &result)
+	err := a.eventStorage.CreateEvent(ctx, result)
 	if err != nil {
 		return nil, fmt.Errorf("to create event: %w", err)
 	}
 
-	return &result, nil
+	return result, nil
+}
+
+var ErrNotValidUser = errors.New("вы не можете изменять не свой заказ")
+
+func (a *App) EditEventSite(ctx context.Context, request *models.RequestEventEditSite) (*models.FullEvent, error) {
+	preResult := models.NewFullEventSite(request.EventID, request.UserID, &request.EventEditSite)
+
+	eventFromDB, err := a.eventStorage.GetEvent(ctx, preResult.ID)
+	if err != nil {
+		return nil, fmt.Errorf("to get event: %w", err)
+	}
+
+	if eventFromDB.CreatorID != preResult.CreatorID {
+		return nil, ErrNotValidUser
+	}
+
+	err = a.eventStorage.EditEvent(ctx, preResult)
+	if err != nil {
+		return nil, fmt.Errorf("to edit event: %w", err)
+	}
+
+	preResult.Subscribers = eventFromDB.Subscribers
+	preResult.Busy = eventFromDB.Busy
+	preResult.URLMessage = eventFromDB.URLMessage
+	preResult.URLAuthor = eventFromDB.URLAuthor
+	preResult.IsFree = eventFromDB.IsFree
+	preResult.RawMessage = eventFromDB.RawMessage
+
+	return preResult, nil
 }
 
 func (a *App) GetEvents(ctx context.Context) ([]models.ShortEvent, error) {

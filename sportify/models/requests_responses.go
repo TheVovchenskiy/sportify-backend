@@ -11,6 +11,12 @@ import (
 	"github.com/google/uuid"
 )
 
+type RequestEventEditSite struct {
+	EventID       uuid.UUID       `json:"-"`
+	UserID        uuid.UUID       `json:"user_id"`
+	EventEditSite EventCreateSite `json:"event_edit"`
+}
+
 type EventCreateSite struct {
 	SportType   SportType  `json:"sport_type"`
 	Address     string     `json:"address"`
@@ -99,7 +105,7 @@ type ResponseErr struct {
 	ErrMessage string `json:"error_message"`
 }
 
-func NewResponseBadRequest(name, message string) ResponseErr {
+func NewResponseBadRequestErr(name, message string) ResponseErr {
 	return ResponseErr{
 		StatusCode: http.StatusBadRequest,
 		ErrName:    name,

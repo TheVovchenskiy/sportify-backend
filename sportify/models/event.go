@@ -44,6 +44,30 @@ type FullEvent struct {
 	RawMessage   *string `json:"raw_message"`
 }
 
+func NewFullEventSite(eventID uuid.UUID, userID uuid.UUID, eventCreteSite *EventCreateSite) *FullEvent {
+	return &FullEvent{ //nolint:exhaustruct
+		ShortEvent: ShortEvent{
+			ID:          eventID,
+			CreatorID:   userID,
+			SportType:   eventCreteSite.SportType,
+			Address:     eventCreteSite.Address,
+			Date:        eventCreteSite.Date,
+			StartTime:   eventCreteSite.StartTime,
+			EndTime:     eventCreteSite.EndTime,
+			Price:       eventCreteSite.Price,
+			IsFree:      IsFreePrice(eventCreteSite.Price),
+			GameLevel:   eventCreteSite.GameLevel,
+			Capacity:    eventCreteSite.Capacity,
+			Busy:        0,
+			Subscribers: make([]uuid.UUID, 0),
+			URLPreview:  eventCreteSite.URLPreview,
+			URLPhotos:   eventCreteSite.URLPhotos,
+		},
+		CreationType: CreationTypeSite,
+		Description:  eventCreteSite.Description,
+	}
+}
+
 type ShortEvent struct {
 	ID          uuid.UUID   `json:"id"`
 	CreatorID   uuid.UUID   `json:"creator_id"`
