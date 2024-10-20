@@ -11,6 +11,10 @@ import (
 	"github.com/google/uuid"
 )
 
+type RequestEventDelete struct {
+	UserID uuid.UUID `json:"user_id"`
+}
+
 type RequestEventEditSite struct {
 	EventID       uuid.UUID       `json:"-"`
 	UserID        uuid.UUID       `json:"user_id"`
@@ -52,6 +56,14 @@ func WriteJSONResponse(w http.ResponseWriter, response any) {
 	w.WriteHeader(http.StatusOK)
 	w.Header().Add("Content-Type", "application/json")
 	w.Write(body)
+}
+
+type ResponseEventDelete struct {
+	Status string `json:"status"`
+}
+
+func NewResponseEventDelete() ResponseEventDelete {
+	return ResponseEventDelete{Status: "ok"}
 }
 
 type ResponseSubscribeEvent struct {
@@ -108,6 +120,14 @@ type ResponseErr struct {
 func NewResponseBadRequestErr(name, message string) ResponseErr {
 	return ResponseErr{
 		StatusCode: http.StatusBadRequest,
+		ErrName:    name,
+		ErrMessage: message,
+	}
+}
+
+func NewResponseForbiddenErr(name, message string) ResponseErr {
+	return ResponseErr{
+		StatusCode: http.StatusForbidden,
 		ErrName:    name,
 		ErrMessage: message,
 	}

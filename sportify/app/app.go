@@ -14,7 +14,9 @@ import (
 type EventStorage interface {
 	CreateEvent(ctx context.Context, event *models.FullEvent) error
 	EditEvent(ctx context.Context, event *models.FullEvent) error
+	DeleteEvent(ctx context.Context, userID, eventID uuid.UUID) error
 	GetEvents(ctx context.Context) ([]models.ShortEvent, error)
+	GetCreatorID(ctx context.Context, eventID uuid.UUID) (uuid.UUID, error)
 	GetEvent(ctx context.Context, id uuid.UUID) (*models.FullEvent, error)
 	SubscribeEvent(ctx context.Context, id uuid.UUID, userID uuid.UUID, subscribe bool) (*models.ResponseSubscribeEvent, error)
 }
@@ -44,7 +46,7 @@ func (a *App) CreateEventSite(ctx context.Context, request *models.RequestEventC
 	return result, nil
 }
 
-var ErrNotValidUser = errors.New("вы не можете изменять не свой заказ")
+var ErrForbiddenEditNotYourEvent = errors.New("вы не можете изменять не свой заказ")
 
 func (a *App) EditEventSite(ctx context.Context, request *models.RequestEventEditSite) (*models.FullEvent, error) {
 	preResult := models.NewFullEventSite(request.EventID, request.UserID, &request.EventEditSite)
@@ -55,7 +57,7 @@ func (a *App) EditEventSite(ctx context.Context, request *models.RequestEventEdi
 	}
 
 	if eventFromDB.CreatorID != preResult.CreatorID {
-		return nil, ErrNotValidUser
+		return nil, ErrForbiddenEditNotYourEvent
 	}
 
 	err = a.eventStorage.EditEvent(ctx, preResult)
@@ -71,6 +73,26 @@ func (a *App) EditEventSite(ctx context.Context, request *models.RequestEventEdi
 	preResult.RawMessage = eventFromDB.RawMessage
 
 	return preResult, nil
+}
+
+var ErrForbiddenDeleteNotYourEvent = errors.New("вы не можете удалять чужое событие")
+
+func (a *App) DeleteEvent(ctx context.Context, userID uuid.UUID, eventID uuid.UUID) error {
+	creatorID, err := a.eventStorage.GetCreatorID(ctx, eventID)
+	if err != nil {
+		return fmt.Errorf("to get cretor id: %w", err)
+	}
+
+	if creatorID != userID {
+		return ErrForbiddenDeleteNotYourEvent
+	}
+
+	err = a.eventStorage.DeleteEvent(ctx, userID, eventID)
+	if err != nil {
+		return fmt.Errorf("to delete event: %w", err)
+	}
+
+	return nil
 }
 
 func (a *App) GetEvents(ctx context.Context) ([]models.ShortEvent, error) {

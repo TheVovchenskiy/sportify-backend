@@ -62,7 +62,38 @@ func (p *PostgresStorage) EditEvent(ctx context.Context, event *models.FullEvent
 	return nil
 }
 
+func (p *PostgresStorage) DeleteEvent(ctx context.Context, userID, eventID uuid.UUID) error {
+	sqlDelete := `UPDATE "public".event SET deleted_at = NOW() WHERE id = $1 AND creator_id = $2`
+
+	_, err := p.pool.Exec(ctx, sqlDelete, eventID, userID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 var ErrNotFoundEvent = errors.New("не найдено событие")
+
+func (p *PostgresStorage) GetCreatorID(ctx context.Context, eventID uuid.UUID) (uuid.UUID, error) {
+	sqlSelectEvent := `
+		SELECT creator_id FROM "public".event WHERE id = $1 AND deleted_at IS NULL;`
+
+	rawRow := p.pool.QueryRow(ctx, sqlSelectEvent, eventID)
+
+	var creatorID uuid.UUID
+
+	err := rawRow.Scan(&creatorID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return uuid.UUID{}, ErrNotFoundEvent
+		}
+
+		return uuid.UUID{}, fmt.Errorf("to scan event: %w", err)
+	}
+
+	return creatorID, nil
+}
 
 func (p *PostgresStorage) GetEvent(ctx context.Context, eventID uuid.UUID) (*models.FullEvent, error) {
 	sqlSelectEvent := `

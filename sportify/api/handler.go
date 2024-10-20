@@ -25,6 +25,7 @@ import (
 type App interface {
 	CreateEventSite(ctx context.Context, request *models.RequestEventCreateSite) (*models.FullEvent, error)
 	EditEventSite(ctx context.Context, request *models.RequestEventEditSite) (*models.FullEvent, error)
+	DeleteEvent(ctx context.Context, userID uuid.UUID, eventID uuid.UUID) error
 	GetEvents(ctx context.Context) ([]models.ShortEvent, error)
 	GetEvent(ctx context.Context, id uuid.UUID) (*models.FullEvent, error)
 	SubscribeEvent(
@@ -96,8 +97,8 @@ func (h *Handler) handleEditEventSiteError(ctx context.Context, w http.ResponseW
 		models.WriteResponseError(w, models.NewResponseNotFoundErr("", db.ErrNotFoundEvent.Error()))
 	case errors.Is(errOutside, api.ErrInvalidUUID):
 		models.WriteResponseError(w, models.NewResponseBadRequestErr("", errOutside.Error()))
-	case errors.Is(errOutside, app.ErrNotValidUser):
-		models.WriteResponseError(w, models.NewResponseBadRequestErr("", app.ErrNotValidUser.Error()))
+	case errors.Is(errOutside, app.ErrForbiddenEditNotYourEvent):
+		models.WriteResponseError(w, models.NewResponseForbiddenErr("", app.ErrForbiddenEditNotYourEvent.Error()))
 	case errors.Is(errOutside, ErrRequestEditEventSite):
 		models.WriteResponseError(w, models.NewResponseBadRequestErr("", errOutside.Error()))
 	default:
@@ -141,6 +142,54 @@ func (h *Handler) EditEventSite(w http.ResponseWriter, r *http.Request) {
 	}
 
 	models.WriteJSONResponse(w, fullEvent)
+}
+
+func (h *Handler) handleDeleteEvent(ctx context.Context, w http.ResponseWriter, errOutside error) {
+	h.logger.WithCtx(ctx).Error(errOutside)
+
+	switch {
+	case errors.Is(errOutside, app.ErrForbiddenDeleteNotYourEvent):
+		models.WriteResponseError(w, models.NewResponseForbiddenErr("", app.ErrForbiddenDeleteNotYourEvent.Error()))
+	case errors.Is(errOutside, db.ErrNotFoundEvent):
+		models.WriteResponseError(w, models.NewResponseNotFoundErr("", db.ErrNotFoundEvent.Error()))
+	case errors.Is(errOutside, api.ErrInvalidUUID):
+		models.WriteResponseError(w, models.NewResponseBadRequestErr("", errOutside.Error()))
+	default:
+		models.WriteResponseError(w, models.NewResponseInternalServerErr("", models.InternalServerErrMessage))
+	}
+}
+
+func (h *Handler) DeleteEvent(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	eventID, err := api.GetUUID(r, "id")
+	if err != nil {
+		h.handleDeleteEvent(ctx, w, err)
+		return
+	}
+
+	reqBody, err := io.ReadAll(r.Body)
+	if err != nil {
+		h.handleDeleteEvent(ctx, w, err)
+		return
+	}
+
+	var reqDeleteEvent models.RequestEventDelete
+	err = json.Unmarshal(reqBody, &reqDeleteEvent)
+	if err != nil {
+		err = fmt.Errorf("%w: %s", ErrRequestSubscribeEvent, err.Error())
+
+		h.handleDeleteEvent(ctx, w, err)
+		return
+	}
+
+	err = h.app.DeleteEvent(ctx, reqDeleteEvent.UserID, eventID)
+	if err != nil {
+		h.handleDeleteEvent(ctx, w, err)
+		return
+	}
+
+	models.WriteJSONResponse(w, models.NewResponseEventDelete())
 }
 
 func (h *Handler) handleGetEventsError(ctx context.Context, w http.ResponseWriter, errOutside error) {

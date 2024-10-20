@@ -80,9 +80,10 @@ func (s *Server) Run(ctx context.Context, configFile string) error {
 		r.Use(middleware.Logger)
 		r.Get("/events", handler.GetEvents)
 		r.Get("/event/{id}", handler.GetEvent)
+		r.Put("/event/{id}", handler.EditEventSite)
+		r.Delete("/event/{id}", handler.DeleteEvent)
 		r.Put("/event/sub/{id}", handler.SubscribeEvent)
 		r.Post("/event", handler.CreateEventSite)
-		r.Put("/event/{id}", handler.EditEventSite)
 
 		r.Get("/img/*", func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Path == "/img/" {
