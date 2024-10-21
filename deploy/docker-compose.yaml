@@ -28,6 +28,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    volumes:
+      - ../sportify/photos:/var/sportify/photos
 
 volumes:
   postgres:

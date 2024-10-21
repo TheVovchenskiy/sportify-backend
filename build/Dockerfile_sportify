@@ -5,10 +5,19 @@ WORKDIR /var/sportify
 RUN apk update
 RUN apk add --no-cache make
 
-COPY sportify .
+COPY sportify/main.go main.go
+COPY sportify/pkg pkg
+COPY sportify/models models
+COPY sportify/api api
+COPY sportify/app app
+COPY sportify/db db
+COPY sportify/server server
+COPY sportify/go.mod go.mod
+COPY sportify/go.sum go.sum
+
 
 COPY Makefile .
-RUN make toolchain
+RUN make toolchain-migrate
 
 
 RUN go build -o main ./main.go
@@ -24,6 +33,7 @@ COPY --from=build /go/bin/migrate /var/message/migrate
 COPY --from=build /var/sportify/main main
 
 COPY ${CONFIG_FILE} /var/config/config.yaml
+COPY sportify/photos photos
 
 EXPOSE 8080
 EXPOSE 8090

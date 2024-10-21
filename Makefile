@@ -1,7 +1,10 @@
-.PHONY: toolchain
-toolchain:
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.61.0
+.PHONY: toolchain-migrate
+toolchain-migrate:
 	go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+
+.PHONY: toolchain
+toolchain: toolchain-migrate
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.61.0
 	go install go.uber.org/mock/mockgen@latest
 
 .PHONY: lint
