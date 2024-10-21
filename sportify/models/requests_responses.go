@@ -66,6 +66,10 @@ func NewResponseEventDelete() ResponseEventDelete {
 	return ResponseEventDelete{Status: "ok"}
 }
 
+type ResponseUploadFile struct {
+	URL string `json:"url"`
+}
+
 type ResponseSubscribeEvent struct {
 	ID          uuid.UUID   `json:"id"`
 	Capacity    *int        `json:"capacity"`

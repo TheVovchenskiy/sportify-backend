@@ -72,7 +72,12 @@ func (s *Server) Run(ctx context.Context, configFile string) error {
 		return err
 	}
 
-	handler := api.NewHandler(app.NewApp(postgresStorage), logger)
+	fsStorage, err := db.NewFileSystemStorage(cfg.PathPhotos)
+	if err != nil {
+		return fmt.Errorf("to new fs storage: %w", err)
+	}
+
+	handler := api.NewHandler(app.NewApp(cfg.URLPrefixFile, fsStorage, postgresStorage), logger)
 
 	r := chi.NewRouter()
 	r.Route(cfg.APIPrefix, func(r chi.Router) {
@@ -84,6 +89,7 @@ func (s *Server) Run(ctx context.Context, configFile string) error {
 		r.Delete("/event/{id}", handler.DeleteEvent)
 		r.Put("/event/sub/{id}", handler.SubscribeEvent)
 		r.Post("/event", handler.CreateEventSite)
+		r.Post("/upload", handler.UploadFile)
 
 		r.Get("/img/*", func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Path == "/img/" {

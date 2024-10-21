@@ -6,6 +6,7 @@ require (
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/go-park-mail-ru/2023_2_Rabotyagi v0.0.0-20231227220914-3122bccece71
 	github.com/google/uuid v1.6.0
+	github.com/jackc/pgx/v5 v5.7.1
 	github.com/spf13/viper v1.19.0
 	go.uber.org/mock v0.5.0
 	go.uber.org/zap v1.27.0
@@ -17,7 +18,6 @@ require (
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
-	github.com/jackc/pgx/v5 v5.7.1 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect

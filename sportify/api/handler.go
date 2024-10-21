@@ -35,6 +35,7 @@ type App interface {
 		subscribe bool,
 	) (*models.ResponseSubscribeEvent, error)
 	DetectEventMessage(text string, regexps []string, minMatches int) (bool, error)
+	SaveImage(ctx context.Context, file []byte) (string, error)
 }
 
 var _ App = (*app.App)(nil)

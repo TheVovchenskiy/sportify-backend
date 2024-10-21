@@ -3,10 +3,11 @@ bot_token: "example_bot_token"
 
 # sportify
 production_mode: true
+url_prefix_file: "http://127.0.0.1:8080/api/v1/img/"
 port_public: ":8080"
 port_tg: ":8090"
 api_prefix: "/api/v1/"
-path_photos: "./photos"
+path_photos: "photos"
 folder_id: "example_folder_id"
 iam_token: "example_iam_toker"
 url_database: "postgres://postgres:postgres@postgres:5432/sportify?sslmode=disable"

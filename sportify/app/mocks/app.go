@@ -10,6 +10,7 @@
 package mocks
 
 import (
+	context "context"
 	reflect "reflect"
 
 	models "github.com/TheVovchenskiy/sportify-backend/models"
@@ -41,61 +42,157 @@ func (m *MockEventStorage) EXPECT() *MockEventStorageMockRecorder {
 	return m.recorder
 }
 
-// AddEvent mocks base method.
-func (m *MockEventStorage) AddEvent(event models.FullEvent) error {
+// CreateEvent mocks base method.
+func (m *MockEventStorage) CreateEvent(ctx context.Context, event *models.FullEvent) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddEvent", event)
+	ret := m.ctrl.Call(m, "CreateEvent", ctx, event)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// AddEvent indicates an expected call of AddEvent.
-func (mr *MockEventStorageMockRecorder) AddEvent(event any) *gomock.Call {
+// CreateEvent indicates an expected call of CreateEvent.
+func (mr *MockEventStorageMockRecorder) CreateEvent(ctx, event any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddEvent", reflect.TypeOf((*MockEventStorage)(nil).AddEvent), event)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEvent", reflect.TypeOf((*MockEventStorage)(nil).CreateEvent), ctx, event)
+}
+
+// DeleteEvent mocks base method.
+func (m *MockEventStorage) DeleteEvent(ctx context.Context, userID, eventID uuid.UUID) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteEvent", ctx, userID, eventID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteEvent indicates an expected call of DeleteEvent.
+func (mr *MockEventStorageMockRecorder) DeleteEvent(ctx, userID, eventID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEvent", reflect.TypeOf((*MockEventStorage)(nil).DeleteEvent), ctx, userID, eventID)
+}
+
+// EditEvent mocks base method.
+func (m *MockEventStorage) EditEvent(ctx context.Context, event *models.FullEvent) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EditEvent", ctx, event)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EditEvent indicates an expected call of EditEvent.
+func (mr *MockEventStorageMockRecorder) EditEvent(ctx, event any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EditEvent", reflect.TypeOf((*MockEventStorage)(nil).EditEvent), ctx, event)
+}
+
+// GetCreatorID mocks base method.
+func (m *MockEventStorage) GetCreatorID(ctx context.Context, eventID uuid.UUID) (uuid.UUID, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCreatorID", ctx, eventID)
+	ret0, _ := ret[0].(uuid.UUID)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCreatorID indicates an expected call of GetCreatorID.
+func (mr *MockEventStorageMockRecorder) GetCreatorID(ctx, eventID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCreatorID", reflect.TypeOf((*MockEventStorage)(nil).GetCreatorID), ctx, eventID)
 }
 
 // GetEvent mocks base method.
-func (m *MockEventStorage) GetEvent(id uuid.UUID) (*models.FullEvent, error) {
+func (m *MockEventStorage) GetEvent(ctx context.Context, id uuid.UUID) (*models.FullEvent, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetEvent", id)
+	ret := m.ctrl.Call(m, "GetEvent", ctx, id)
 	ret0, _ := ret[0].(*models.FullEvent)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetEvent indicates an expected call of GetEvent.
-func (mr *MockEventStorageMockRecorder) GetEvent(id any) *gomock.Call {
+func (mr *MockEventStorageMockRecorder) GetEvent(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvent", reflect.TypeOf((*MockEventStorage)(nil).GetEvent), id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvent", reflect.TypeOf((*MockEventStorage)(nil).GetEvent), ctx, id)
 }
 
 // GetEvents mocks base method.
-func (m *MockEventStorage) GetEvents() ([]models.ShortEvent, error) {
+func (m *MockEventStorage) GetEvents(ctx context.Context) ([]models.ShortEvent, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetEvents")
+	ret := m.ctrl.Call(m, "GetEvents", ctx)
 	ret0, _ := ret[0].([]models.ShortEvent)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetEvents indicates an expected call of GetEvents.
-func (mr *MockEventStorageMockRecorder) GetEvents() *gomock.Call {
+func (mr *MockEventStorageMockRecorder) GetEvents(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvents", reflect.TypeOf((*MockEventStorage)(nil).GetEvents))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvents", reflect.TypeOf((*MockEventStorage)(nil).GetEvents), ctx)
 }
 
 // SubscribeEvent mocks base method.
-func (m *MockEventStorage) SubscribeEvent(id, userID uuid.UUID, subscribe bool) (*models.ResponseSubscribeEvent, error) {
+func (m *MockEventStorage) SubscribeEvent(ctx context.Context, id, userID uuid.UUID, subscribe bool) (*models.ResponseSubscribeEvent, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SubscribeEvent", id, userID, subscribe)
+	ret := m.ctrl.Call(m, "SubscribeEvent", ctx, id, userID, subscribe)
 	ret0, _ := ret[0].(*models.ResponseSubscribeEvent)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // SubscribeEvent indicates an expected call of SubscribeEvent.
-func (mr *MockEventStorageMockRecorder) SubscribeEvent(id, userID, subscribe any) *gomock.Call {
+func (mr *MockEventStorageMockRecorder) SubscribeEvent(ctx, id, userID, subscribe any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubscribeEvent", reflect.TypeOf((*MockEventStorage)(nil).SubscribeEvent), id, userID, subscribe)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubscribeEvent", reflect.TypeOf((*MockEventStorage)(nil).SubscribeEvent), ctx, id, userID, subscribe)
+}
+
+// MockFileStorage is a mock of FileStorage interface.
+type MockFileStorage struct {
+	ctrl     *gomock.Controller
+	recorder *MockFileStorageMockRecorder
+	isgomock struct{}
+}
+
+// MockFileStorageMockRecorder is the mock recorder for MockFileStorage.
+type MockFileStorageMockRecorder struct {
+	mock *MockFileStorage
+}
+
+// NewMockFileStorage creates a new mock instance.
+func NewMockFileStorage(ctrl *gomock.Controller) *MockFileStorage {
+	mock := &MockFileStorage{ctrl: ctrl}
+	mock.recorder = &MockFileStorageMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockFileStorage) EXPECT() *MockFileStorageMockRecorder {
+	return m.recorder
+}
+
+// Check mocks base method.
+func (m *MockFileStorage) Check(ctx context.Context, files []string) ([]bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Check", ctx, files)
+	ret0, _ := ret[0].([]bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Check indicates an expected call of Check.
+func (mr *MockFileStorageMockRecorder) Check(ctx, files any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Check", reflect.TypeOf((*MockFileStorage)(nil).Check), ctx, files)
+}
+
+// SaveFile mocks base method.
+func (m *MockFileStorage) SaveFile(ctx context.Context, file []byte, fileName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveFile", ctx, file, fileName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SaveFile indicates an expected call of SaveFile.
+func (mr *MockFileStorageMockRecorder) SaveFile(ctx, file, fileName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveFile", reflect.TypeOf((*MockFileStorage)(nil).SaveFile), ctx, file, fileName)
 }

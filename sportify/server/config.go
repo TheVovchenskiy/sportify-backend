@@ -12,6 +12,7 @@ var once = sync.Once{}
 
 type Config struct {
 	ProductionMode  bool
+	URLPrefixFile   string
 	PortPublic      string
 	PortTg          string
 	APIPrefix       string
@@ -37,6 +38,7 @@ func NewConfig(configFile string) (*Config, error) {
 
 	return &Config{
 		ProductionMode:  viper.GetBool("production_mode"),
+		URLPrefixFile:   viper.GetString("url_prefix_file"),
 		PortPublic:      viper.GetString("port_public"),
 		PortTg:          viper.GetString("port_tg"),
 		APIPrefix:       viper.GetString("api_prefix"),

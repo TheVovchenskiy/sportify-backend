@@ -21,18 +21,27 @@ type EventStorage interface {
 	SubscribeEvent(ctx context.Context, id uuid.UUID, userID uuid.UUID, subscribe bool) (*models.ResponseSubscribeEvent, error)
 }
 
+type FileStorage interface {
+	SaveFile(ctx context.Context, file []byte, fileName string) error
+	Check(ctx context.Context, files []string) ([]bool, error)
+}
+
+var _ FileStorage = (*db.FileSystemStorage)(nil)
+
 //go:generate mockgen -source=app.go -destination=mocks/app.go -package=mocks EventStorage
 
 type App struct {
-	eventStorage EventStorage
+	urlPrefixFile string
+	fileStorage   FileStorage
+	eventStorage  EventStorage
 }
 
 //var _ EventStorage = (*db.SimpleEventStorage)(nil)
 
 var _ EventStorage = (*db.PostgresStorage)(nil)
 
-func NewApp(eventStorage EventStorage) *App {
-	return &App{eventStorage: eventStorage}
+func NewApp(urlPrefixFile string, fileStorage FileStorage, eventStorage EventStorage) *App {
+	return &App{urlPrefixFile: urlPrefixFile, eventStorage: eventStorage, fileStorage: fileStorage}
 }
 
 func (a *App) CreateEventSite(ctx context.Context, request *models.RequestEventCreateSite) (*models.FullEvent, error) {
