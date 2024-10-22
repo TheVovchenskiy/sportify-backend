@@ -35,6 +35,7 @@ COPY --from=build /var/sportify/main main
 COPY ${CONFIG_FILE} /var/config/config.yaml
 COPY sportify/photos photos
 COPY sportify/db/migrations migrations
+COPY sportify/db/fill.sql fill.sql
 
 EXPOSE 8080
 EXPOSE 8090
