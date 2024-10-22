@@ -44,6 +44,28 @@ func NewApp(urlPrefixFile string, fileStorage FileStorage, eventStorage EventSto
 	return &App{urlPrefixFile: urlPrefixFile, eventStorage: eventStorage, fileStorage: fileStorage}
 }
 
+var (
+	creatorIDTgDummy, _ = uuid.Parse("cc6edd06-43b7-4d4a-a923-dcabb819bec4")
+	urlPreviewDummy     = "default_football.jpeg"
+)
+
+func (a *App) CreateEventTg(ctx context.Context, fullEvent *models.FullEvent) (*models.FullEvent, error) {
+	// TODO add in db persistent map uuid to id from tg user
+	fullEvent.CreatorID = creatorIDTgDummy
+	fullEvent.ID = uuid.New()
+	fullEvent.CreationType = models.CreationTypeTg
+	// TODO try get photos from tg message and default photo to different SportType
+	fullEvent.URLPreview = a.urlPrefixFile + urlPreviewDummy
+	fullEvent.URLPhotos = []string{a.urlPrefixFile + urlPreviewDummy}
+
+	err := a.eventStorage.CreateEvent(ctx, fullEvent)
+	if err != nil {
+		return nil, fmt.Errorf("to create event: %w", err)
+	}
+
+	return fullEvent, nil
+}
+
 func (a *App) CreateEventSite(ctx context.Context, request *models.RequestEventCreateSite) (*models.FullEvent, error) {
 	result := models.NewFullEventSite(uuid.New(), request.UserID, &request.CreateEvent)
 

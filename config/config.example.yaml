@@ -1,4 +1,4 @@
-api_url: "http://sportify:8090/message"
+api_url: "http://localhost:8090/api/v1/message"
 bot_token: "example_bot_token"
 
 # sportify

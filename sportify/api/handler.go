@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -24,6 +23,7 @@ import (
 
 type App interface {
 	CreateEventSite(ctx context.Context, request *models.RequestEventCreateSite) (*models.FullEvent, error)
+	CreateEventTg(ctx context.Context, fullEvent *models.FullEvent) (*models.FullEvent, error)
 	EditEventSite(ctx context.Context, request *models.RequestEventEditSite) (*models.FullEvent, error)
 	DeleteEvent(ctx context.Context, userID uuid.UUID, eventID uuid.UUID) error
 	GetEvents(ctx context.Context) ([]models.ShortEvent, error)
@@ -41,12 +41,14 @@ type App interface {
 var _ App = (*app.App)(nil)
 
 type Handler struct {
-	logger *mylogger.MyLogger
-	app    App
+	folderID string
+	iamToken string
+	logger   *mylogger.MyLogger
+	app      App
 }
 
-func NewHandler(app App, logger *mylogger.MyLogger) Handler {
-	return Handler{app: app, logger: logger}
+func NewHandler(app App, logger *mylogger.MyLogger, folderID, IAMToken string) Handler {
+	return Handler{app: app, logger: logger, folderID: folderID, iamToken: IAMToken}
 }
 
 func (h *Handler) handleCreateEventSiteError(ctx context.Context, w http.ResponseWriter, errOutside error) {
@@ -368,10 +370,7 @@ func eventFromYaGPT(text []byte) (*models.FullEvent, error) {
 }
 
 func (h *Handler) requestToYaGPT(text string) (*models.FullEvent, error) {
-	folderID := os.Getenv("FOLDER_ID")
-	iamToken := os.Getenv("IAM_TOKEN")
-
-	body := templateBodyYaGPT(folderID, text)
+	body := templateBodyYaGPT(h.folderID, text)
 
 	req, err := http.NewRequest(http.MethodPost, "https://llm.api.cloud.yandex.net/foundationModels/v1/completion", bytes.NewReader([]byte(body)))
 	if err != nil {
@@ -379,8 +378,8 @@ func (h *Handler) requestToYaGPT(text string) (*models.FullEvent, error) {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header["x-folder-id"] = []string{folderID}
-	req.Header["Authorization"] = []string{"Bearer " + iamToken}
+	req.Header["x-folder-id"] = []string{h.folderID}
+	req.Header["Authorization"] = []string{"Bearer " + h.iamToken}
 
 	client := http.DefaultClient
 	res, err := client.Do(req)
@@ -408,12 +407,16 @@ func (h *Handler) handleTryCreateEventErr(ctx context.Context, w http.ResponseWr
 	h.logger.WithCtx(ctx).Error(errOutside)
 
 	switch {
+	case errors.Is(errOutside, ErrBadRequestTgMessage):
+		models.WriteResponseError(w, models.NewResponseBadRequestErr("", ErrBadRequestTgMessage.Error()))
 	case errors.Is(errOutside, db.ErrEventAlreadyExist):
 		models.WriteResponseError(w, models.NewResponseBadRequestErr("", db.ErrEventAlreadyExist.Error()))
 	default:
 		models.WriteResponseError(w, models.NewResponseInternalServerErr("", models.InternalServerErrMessage))
 	}
 }
+
+var ErrBadRequestTgMessage = errors.New("не корректный запрос tg message")
 
 func (h *Handler) TryCreateEvent(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -422,9 +425,11 @@ func (h *Handler) TryCreateEvent(w http.ResponseWriter, r *http.Request) {
 
 	reqBody, err := io.ReadAll(r.Body)
 	if err != nil {
-		h.handleTryCreateEventErr(ctx, w, err)
+		h.handleTryCreateEventErr(ctx, w, fmt.Errorf("%w: %s", ErrBadRequestTgMessage, err.Error()))
 		return
 	}
+
+	h.logger.WithCtx(ctx).Info(string(reqBody))
 
 	err = json.Unmarshal(reqBody, &tgMessage)
 	if err != nil {
@@ -432,8 +437,10 @@ func (h *Handler) TryCreateEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// TODO add detecting same message for example by RawMessage
+
 	if ok, err := h.app.DetectEventMessage(tgMessage.RawMessage, app.SportEventRegExps, 3); !ok || err != nil {
-		fmt.Println("err detect: ", err)
+		h.logger.WithCtx(ctx).Infof("to detect event message: %+v", err)
 		w.WriteHeader(http.StatusOK)
 		return
 	}
@@ -444,13 +451,18 @@ func (h *Handler) TryCreateEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println(fullEvent)
-	// TODO add CreateEventTg
-	//err = h.app.AddEvent(ctx, *fullEvent)
-	//if err != nil {
-	//	h.handleGetEventError(ctx, w, err)
-	//	return
-	//}
+	h.logger.WithCtx(ctx).Info(fullEvent)
+
+	fullEvent.URLMessage = common.Ref(tgMessage.GetURLMessage())
+	fullEvent.URLAuthor = common.Ref(tgMessage.GetURLAuthor())
+
+	resultFullEvent, err := h.app.CreateEventTg(ctx, fullEvent)
+	if err != nil {
+		h.handleGetEventError(ctx, w, err)
+		return
+	}
+
+	h.logger.WithCtx(ctx).Info(resultFullEvent)
 
 	w.WriteHeader(http.StatusOK)
 }

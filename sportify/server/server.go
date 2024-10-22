@@ -77,7 +77,7 @@ func (s *Server) Run(ctx context.Context, configFile string) error {
 		return fmt.Errorf("to new fs storage: %w", err)
 	}
 
-	handler := api.NewHandler(app.NewApp(cfg.URLPrefixFile, fsStorage, postgresStorage), logger)
+	handler := api.NewHandler(app.NewApp(cfg.URLPrefixFile, fsStorage, postgresStorage), logger, cfg.FolderID, cfg.IAMToken)
 
 	r := chi.NewRouter()
 	r.Route(cfg.APIPrefix, func(r chi.Router) {

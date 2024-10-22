@@ -1,0 +1,1 @@
+ALTER TABLE "public".event ALTER COLUMN game_level DROP NOT NULL;

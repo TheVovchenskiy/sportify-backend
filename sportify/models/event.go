@@ -6,10 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-type TgMessage struct {
-	RawMessage string `json:"text"`
-}
-
 type CreationType string
 
 const (
