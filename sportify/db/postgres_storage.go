@@ -30,9 +30,11 @@ func (p *PostgresStorage) CreateEvent(ctx context.Context, event *models.FullEve
           $9, $10, $11, $12, $13, $14, $15,
           $16, $17, $18, $19);`
 
+	preparedGameLevel := pgtype.Array[string]{Elements: models.RawGameLevel(event.GameLevels)}
+
 	_, err := p.pool.Exec(ctx, sqlInsertEvent,
 		event.ID, event.CreatorID, event.Subscribers, event.SportType, event.Address,
-		event.Date, event.StartTime, event.EndTime, event.Price, event.GameLevel,
+		event.Date, event.StartTime, event.EndTime, event.Price, preparedGameLevel,
 		event.Description, event.RawMessage, event.Capacity, event.Busy, event.CreationType,
 		event.URLMessage, event.URLAuthor, event.URLPreview, event.URLPhotos)
 	if err != nil {
@@ -50,9 +52,11 @@ func (p *PostgresStorage) EditEvent(ctx context.Context, event *models.FullEvent
 		url_author = $13, url_preview = $14, url_photos = $15
 		WHERE id = $16 AND deleted_at IS NULL;`
 
+	preparedGameLevels := pgtype.Array[string]{Elements: models.RawGameLevel(event.GameLevels)}
+
 	_, err := p.pool.Exec(ctx, sqlUpdateEvent,
 		event.CreatorID, event.SportType, event.Address,
-		event.Date, event.StartTime, event.EndTime, event.Price, event.GameLevel,
+		event.Date, event.StartTime, event.EndTime, event.Price, preparedGameLevels,
 		event.Description, event.Capacity, event.CreationType, event.URLMessage,
 		event.URLAuthor, event.URLPreview, event.URLPhotos, event.ID)
 	if err != nil {
@@ -108,10 +112,11 @@ func (p *PostgresStorage) GetEvent(ctx context.Context, eventID uuid.UUID) (*mod
 		event            models.FullEvent
 		rawSubscriberIDs pgtype.Array[uuid.UUID]
 		rawURLPhotos     pgtype.Array[string]
+		rawGameLevels    pgtype.Array[*string]
 	)
 
 	err := rawRow.Scan(&event.CreatorID, &rawSubscriberIDs, &event.SportType, &event.Address,
-		&event.Date, &event.StartTime, &event.EndTime, &event.Price, &event.GameLevel,
+		&event.Date, &event.StartTime, &event.EndTime, &event.Price, &rawGameLevels,
 		&event.Description, &event.RawMessage, &event.Capacity, &event.Busy, &event.CreationType,
 		&event.URLAuthor, &event.URLMessage, &event.URLPreview, &rawURLPhotos)
 	if err != nil {
@@ -126,6 +131,7 @@ func (p *PostgresStorage) GetEvent(ctx context.Context, eventID uuid.UUID) (*mod
 	event.Subscribers = rawSubscriberIDs.Elements
 	event.URLPhotos = rawURLPhotos.Elements
 	event.IsFree = *event.Price == 0
+	event.GameLevels = models.GameLevelFromRawNullable(rawGameLevels.Elements)
 
 	return &event, nil
 }
@@ -218,16 +224,17 @@ func (p *PostgresStorage) GetEvents(ctx context.Context) ([]models.ShortEvent, e
 	}
 
 	var (
-		curEvent  models.ShortEvent
-		result    []models.ShortEvent
-		photoURLs pgtype.Array[string]
+		curEvent      models.ShortEvent
+		result        []models.ShortEvent
+		photoURLs     pgtype.Array[string]
+		rawGameLevels pgtype.Array[*string]
 	)
 
 	_, err = pgx.ForEachRow(
 		rawRows,
 		[]any{
 			&curEvent.ID, &curEvent.CreatorID, &curEvent.SportType, &curEvent.Address, &curEvent.Date,
-			&curEvent.StartTime, &curEvent.EndTime, &curEvent.Price, &curEvent.GameLevel,
+			&curEvent.StartTime, &curEvent.EndTime, &curEvent.Price, &rawGameLevels,
 			&curEvent.Capacity, &curEvent.Busy, &curEvent.Subscribers,
 			&curEvent.URLPreview, &photoURLs,
 		},
@@ -243,7 +250,7 @@ func (p *PostgresStorage) GetEvents(ctx context.Context) ([]models.ShortEvent, e
 					EndTime:     curEvent.EndTime,
 					Price:       curEvent.Price,
 					IsFree:      *curEvent.Price == 0,
-					GameLevel:   curEvent.GameLevel,
+					GameLevels:  models.GameLevelFromRawNullable(rawGameLevels.Elements),
 					Capacity:    curEvent.Capacity,
 					Busy:        curEvent.Busy,
 					Subscribers: curEvent.Subscribers,

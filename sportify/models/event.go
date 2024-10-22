@@ -52,7 +52,7 @@ func NewFullEventSite(eventID uuid.UUID, userID uuid.UUID, eventCreteSite *Event
 			EndTime:     eventCreteSite.EndTime,
 			Price:       eventCreteSite.Price,
 			IsFree:      IsFreePrice(eventCreteSite.Price),
-			GameLevel:   eventCreteSite.GameLevel,
+			GameLevels:  eventCreteSite.GameLevels,
 			Capacity:    eventCreteSite.Capacity,
 			Busy:        0,
 			Subscribers: make([]uuid.UUID, 0),
@@ -74,7 +74,7 @@ type ShortEvent struct {
 	EndTime     *time.Time  `json:"end_time"`
 	Price       *int        `json:"price"`
 	IsFree      bool        `json:"is_free"`
-	GameLevel   *GameLevel  `json:"game_level"`
+	GameLevels  []GameLevel `json:"game_level"`
 	Capacity    *int        `json:"capacity"`
 	Busy        int         `json:"busy"`
 	Subscribers []uuid.UUID `json:"subscribers_id"`
@@ -84,4 +84,37 @@ type ShortEvent struct {
 
 func IsFreePrice(price *int) bool {
 	return price == nil || *price == 0
+}
+
+func RawGameLevel(gameLevels []GameLevel) []string {
+	result := make([]string, len(gameLevels))
+
+	for i, v := range gameLevels {
+		result[i] = string(v)
+	}
+
+	return result
+}
+
+func GameLevelFromRaw(gameLevels []string) []GameLevel {
+	result := make([]GameLevel, len(gameLevels))
+
+	for i, v := range gameLevels {
+		result[i] = GameLevel(v)
+	}
+
+	return result
+}
+
+func GameLevelFromRawNullable(gameLevels []*string) []GameLevel {
+	result := []GameLevel{} // for contract with front
+
+	for _, v := range gameLevels {
+		if v == nil {
+			continue
+		}
+		result = append(result, GameLevel(*v))
+	}
+
+	return result
 }

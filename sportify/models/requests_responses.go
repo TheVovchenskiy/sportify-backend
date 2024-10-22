@@ -22,17 +22,17 @@ type RequestEventEditSite struct {
 }
 
 type EventCreateSite struct {
-	SportType   SportType  `json:"sport_type"`
-	Address     string     `json:"address"`
-	Date        time.Time  `json:"date"`
-	StartTime   time.Time  `json:"start_time"`
-	EndTime     *time.Time `json:"end_time"`
-	Price       *int       `json:"price"`
-	GameLevel   *GameLevel `json:"game_level"`
-	Description *string    `json:"description"`
-	Capacity    *int       `json:"capacity"`
-	URLPreview  string     `json:"preview"`
-	URLPhotos   []string   `json:"photos"`
+	SportType   SportType   `json:"sport_type"`
+	Address     string      `json:"address"`
+	Date        time.Time   `json:"date"`
+	StartTime   time.Time   `json:"start_time"`
+	EndTime     *time.Time  `json:"end_time"`
+	Price       *int        `json:"price"`
+	GameLevels  []GameLevel `json:"game_level"`
+	Description *string     `json:"description"`
+	Capacity    *int        `json:"capacity"`
+	URLPreview  string      `json:"preview"`
+	URLPhotos   []string    `json:"photos"`
 }
 
 type RequestEventCreateSite struct {

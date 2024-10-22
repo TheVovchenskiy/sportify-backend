@@ -53,8 +53,9 @@ func (a *App) CreateEventTg(ctx context.Context, fullEvent *models.FullEvent) (*
 	// TODO add in db persistent map uuid to id from tg user
 	fullEvent.CreatorID = creatorIDTgDummy
 	fullEvent.ID = uuid.New()
-	fullEvent.CreationType = models.CreationTypeTg
 	// TODO try get photos from tg message and default photo to different SportType
+	fullEvent.CreationType = models.CreationTypeTg
+	fullEvent.IsFree = models.IsFreePrice(fullEvent.Price)
 	fullEvent.URLPreview = a.urlPrefixFile + urlPreviewDummy
 	fullEvent.URLPhotos = []string{a.urlPrefixFile + urlPreviewDummy}
 
