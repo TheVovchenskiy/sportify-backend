@@ -29,11 +29,12 @@ ARG CONFIG_FILE
 
 WORKDIR /var/sportify
 
-COPY --from=build /go/bin/migrate /var/message/migrate
+COPY --from=build /go/bin/migrate /var/sportify/migrate
 COPY --from=build /var/sportify/main main
 
 COPY ${CONFIG_FILE} /var/config/config.yaml
 COPY sportify/photos photos
+COPY sportify/db/migrations migrations
 
 EXPOSE 8080
 EXPOSE 8090

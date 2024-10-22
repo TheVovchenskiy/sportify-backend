@@ -27,7 +27,7 @@ make docker-compose-up
 
 Для накатки миграций:
 ```shell
-migrate -database postgres://postgres:postgres@localhost:5432/sportify?sslmode=disable -path ./sportify/db/migrations up
+docker exec deploy-backend_sportify-1 ./migrate -database postgres://postgres:postgres@postgres:5432/sportify?sslmode=disable -path ./migrations up
 ```
 
 Для заполнения бд можно вручную исполнить из IDE [sql запрос](sportify/db/fill.sql) или 
