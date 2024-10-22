@@ -52,5 +52,5 @@ make toolchain
 Для запуска чисто бэка(без бд) на локалке:
 ```shell
 export CONFIG_FILE=config/config.example.yaml && \
-cd sportify && go run . -configfile=config.example
+cd sportify && go run . --config-path=<path_to_config_dir>
 ```

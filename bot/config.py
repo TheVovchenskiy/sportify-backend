@@ -23,9 +23,15 @@ class BotConfig:
             raise FileNotFoundError(f"Config file not found: {config_path}")
 
         env_config = BotConfig._from_env()
-        config = {**yaml_config, **env_config}
+        if "app" not in yaml_config or "api_url" not in yaml_config["app"]:
+            raise ValueError("api_url is not defined in config file")
 
-        return cls(**config)
+        api_url = yaml_config["app"]["api_url"]
+        token = env_config["token"]
+
+        config = {**yaml_config["bot"], **env_config}
+
+        return cls(token, api_url)
 
     @staticmethod
     def _from_yaml(config_path: str) -> dict:

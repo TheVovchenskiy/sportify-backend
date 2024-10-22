@@ -36,6 +36,7 @@ func New(
 	options ...zap.Option,
 ) (*MyLogger, error) {
 	var err error
+	var logger *zap.SugaredLogger
 
 	once.Do(func() {
 		var config zap.Config

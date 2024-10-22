@@ -31,6 +31,19 @@ services:
         condition: service_healthy
     volumes:
       - ../sportify/photos:/var/sportify/photos
+  consul:
+    image: hashicorp/consul:1.19
+    ports:
+      - "8500:8500"
+    volumes:
+      - consul:/consul/data
+  # vault:
+  #   image: hashicorp/vault
+  #   environment:
+  #     VAULT_DEV_ROOT_TOKEN_ID: 123
+  #   ports:
+  #     - "8200:8200"
 
 volumes:
   postgres:
+  consul:

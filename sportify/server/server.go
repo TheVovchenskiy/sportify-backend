@@ -9,7 +9,9 @@ import (
 
 	"github.com/TheVovchenskiy/sportify-backend/api"
 	"github.com/TheVovchenskiy/sportify-backend/app"
+	"github.com/TheVovchenskiy/sportify-backend/app/config"
 	"github.com/TheVovchenskiy/sportify-backend/db"
+	sportifymiddleware "github.com/TheVovchenskiy/sportify-backend/pkg/middleware"
 	"github.com/TheVovchenskiy/sportify-backend/pkg/mylogger"
 
 	chi "github.com/go-chi/chi/v5"
@@ -18,9 +20,9 @@ import (
 
 const basicTimeout = 10 * time.Second
 
-func (s *Server) runTgHandler(ctx context.Context, cfg *Config, handler api.Handler, logger *mylogger.MyLogger) error {
+func (s *Server) runTgHandler(ctx context.Context, cfg *config.Config, handler api.Handler, logger *mylogger.MyLogger) error {
 	r := chi.NewRouter()
-	r.Route(cfg.APIPrefix, func(r chi.Router) {
+	r.Route(cfg.App.APIPrefix, func(r chi.Router) {
 		r.Use(middleware.Recoverer)
 		r.Use(middleware.Logger)
 
@@ -28,14 +30,14 @@ func (s *Server) runTgHandler(ctx context.Context, cfg *Config, handler api.Hand
 	})
 
 	s.serverTg = http.Server{ //nolint:exhaustruct
-		Addr:                         cfg.PortTg,
+		Addr:                         cfg.Bot.Port,
 		Handler:                      r,
 		DisableGeneralOptionsHandler: false,
 		ReadTimeout:                  basicTimeout,
 		WriteTimeout:                 basicTimeout,
 	}
 
-	logger.WithCtx(ctx).Infof("listen bot input %s\n", cfg.PortTg)
+	logger.Infof("listen bot input %s\n", cfg.Bot.Port)
 	if err := s.serverTg.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
@@ -46,28 +48,35 @@ func (s *Server) runTgHandler(ctx context.Context, cfg *Config, handler api.Hand
 type Server struct {
 	serverPublic http.Server
 	serverTg     http.Server
-	configFile   string
+	configPaths  []string
 	logger       *mylogger.MyLogger
 }
 
 //nolint:funlen
-func (s *Server) Run(ctx context.Context, configFile string) error {
-	s.configFile = configFile
+func (s *Server) Run(ctx context.Context, configFile []string) error {
+	s.configPaths = configFile
 
-	cfg, err := NewConfig(configFile)
+	err := config.InitConfig(configFile)
 	if err != nil {
 		return err
 	}
 
-	logger, err := mylogger.New(cfg.LoggerOutput, cfg.LoggerErrOutput, cfg.ProductionMode)
+	cfg := config.GetGlobalConfig()
+
+	logger, err := mylogger.New(
+		cfg.Logger.LoggerOutput,
+		cfg.Logger.LoggerErrOutput,
+		cfg.Logger.ProductionMode,
+	)
 	if err != nil {
 		return err
 	}
-
 	defer logger.Sync()
 	s.logger = logger
 
-	postgresStorage, err := db.NewPostgresStorage(ctx, cfg.URLDatabase)
+	config.WatchRemoteConfig(logger)
+
+	postgresStorage, err := db.NewPostgresStorage(ctx, cfg.Postgres.URL)
 	if err != nil {
 		return err
 	}
@@ -80,9 +89,11 @@ func (s *Server) Run(ctx context.Context, configFile string) error {
 	handler := api.NewHandler(app.NewApp(cfg.URLPrefixFile, fsStorage, postgresStorage), logger, cfg.FolderID, cfg.IAMToken)
 
 	r := chi.NewRouter()
-	r.Route(cfg.APIPrefix, func(r chi.Router) {
-		r.Use(middleware.Recoverer)
+	r.Route(cfg.App.APIPrefix, func(r chi.Router) {
 		r.Use(middleware.Logger)
+		r.Use(middleware.Recoverer)
+		r.Use(middleware.RequestID)
+		r.Use(sportifymiddleware.Config)
 		r.Get("/events", handler.GetEvents)
 		r.Get("/event/{id}", handler.GetEvent)
 		r.Put("/event/{id}", handler.EditEventSite)
@@ -97,7 +108,7 @@ func (s *Server) Run(ctx context.Context, configFile string) error {
 				return
 			}
 
-			fs := http.StripPrefix(cfg.APIPrefix+"img/", http.FileServer(http.Dir(cfg.PathPhotos)))
+			fs := http.StripPrefix(cfg.App.APIPrefix+"img/", http.FileServer(http.Dir(cfg.App.PathPhotos)))
 
 			fs.ServeHTTP(w, r)
 		})
@@ -105,19 +116,19 @@ func (s *Server) Run(ctx context.Context, configFile string) error {
 
 	go func() {
 		if err := s.runTgHandler(ctx, cfg, handler, logger); err != nil {
-			logger.WithCtx(ctx).Error(err)
+			logger.Error(err)
 		}
 	}()
 
 	s.serverPublic = http.Server{ //nolint:exhaustruct
-		Addr:                         cfg.PortPublic,
+		Addr:                         cfg.App.Port,
 		Handler:                      r,
 		DisableGeneralOptionsHandler: false,
 		ReadTimeout:                  basicTimeout,
 		WriteTimeout:                 basicTimeout,
 	}
 
-	logger.WithCtx(ctx).Infof("listen %s\n", cfg.PortPublic)
+	logger.Infof("listen %s\n", cfg.App.Port)
 	if err := s.serverPublic.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}

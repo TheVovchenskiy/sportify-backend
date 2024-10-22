@@ -141,3 +141,6 @@ issues:
         - funlen
         - maintidx
         - dupl
+    - path: app/config/
+      linters:
+        - gochecknoglobals

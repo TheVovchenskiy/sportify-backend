@@ -1,4 +1,4 @@
-FROM golang:1.23-alpine3.20 as build
+FROM golang:1.23-alpine3.20 AS build
 
 WORKDIR /var/sportify
 
@@ -20,10 +20,10 @@ COPY Makefile .
 RUN make toolchain-migrate
 
 
-RUN go build -o main ./main.go
+RUN go build -o sportify ./main.go
 
 #=========================================================================================
-FROM alpine:3.20 as production
+FROM alpine:3.20 AS production
 
 ARG CONFIG_FILE
 
@@ -40,4 +40,4 @@ COPY sportify/db/fill.sql fill.sql
 EXPOSE 8080
 EXPOSE 8090
 
-ENTRYPOINT ./main -configfile config.yaml
+ENTRYPOINT ./sportify run-server --config-path /var/config/
