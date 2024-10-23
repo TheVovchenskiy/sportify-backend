@@ -18,16 +18,16 @@ create-migration:
 
 .PHONY: migration-up
 migration-up:
-	docker exec -it deploy-backend_sportify-1 ./migrate -database postgres://postgres:postgres@postgres:5432/sportify?sslmode=disable -path ./migrations up
+	docker exec -it sportify-backend-backend_sportify-1 ./migrate -database postgres://postgres:postgres@postgres:5432/sportify?sslmode=disable -path ./migrations up
 
 .PHONY: migration-up-reserve
 migration-up-reserve:
-	docker exec -it deploy-backend_sportify-1 ./migrate -database postgres://postgres:postgres@localhost:5432/sportify?sslmode=disable -path ./migrations up
+	docker exec -it sportify-backend-backend_sportify-1 ./migrate -database postgres://postgres:postgres@localhost:5432/sportify?sslmode=disable -path ./migrations up
 
 .PHONY: fill-db
 fill-db:
-	docker cp sportify/db/fill.sql deploy-postgres-1:fill.sql
-	docker exec -it deploy-postgres-1 psql -U postgres -d sportify -f fill.sql
+	docker cp sportify/db/fill.sql sportify-backend-postgres-1:fill.sql
+	docker exec -it sportify-backend-postgres-1 psql -U postgres -d sportify -f fill.sql
 
 .PHONY: docker-compose-up
 docker-compose-up:
