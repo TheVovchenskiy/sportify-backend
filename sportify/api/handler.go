@@ -27,6 +27,7 @@ type App interface {
 	EditEventSite(ctx context.Context, request *models.RequestEventEditSite) (*models.FullEvent, error)
 	DeleteEvent(ctx context.Context, userID uuid.UUID, eventID uuid.UUID) error
 	GetEvents(ctx context.Context) ([]models.ShortEvent, error)
+	FindEvents(ctx context.Context, filterParams *models.FilterParams) ([]models.ShortEvent, error)
 	GetEvent(ctx context.Context, id uuid.UUID) (*models.FullEvent, error)
 	SubscribeEvent(
 		ctx context.Context,
@@ -211,6 +212,30 @@ func (h *Handler) GetEvents(w http.ResponseWriter, r *http.Request) {
 
 	models.WriteJSONResponse(w, events)
 }
+
+var ErrInvalidQueryParams = errors.New("не верные параметры запроса")
+
+func (h *Handler) FindEvents(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	q := r.URL.Query()
+
+	filterParams, err := models.ParseFilterParams(q)
+	if err != nil {
+		h.handleGetEventsError(ctx, w, fmt.Errorf("%w: %w", ErrInvalidQueryParams, err))
+		return
+	}
+
+	events, err := h.app.FindEvents(ctx, filterParams)
+	if err != nil {
+		h.handleGetEventsError(ctx, w, err)
+		return
+	}
+
+	models.WriteJSONResponse(w, events)
+}
+
+var ErrInvalidEventID = errors.New("не верный event id")
 
 func (h *Handler) handleGetEventError(ctx context.Context, w http.ResponseWriter, errOutside error) {
 	h.logger.WithCtx(ctx).Error(errOutside)

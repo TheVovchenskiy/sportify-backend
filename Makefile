@@ -31,11 +31,11 @@ fill-db:
 
 .PHONY: docker-compose-up
 docker-compose-up:
-	docker compose -f deploy/docker-compose.yaml up -d
+	docker compose --project-directory . -f deploy/docker-compose.yaml up -d
 
 .PHONY: docker-compose-down
 docker-compose-down:
-	docker compose -f deploy/docker-compose.yaml down
+	docker --project-directory . compose -f deploy/docker-compose.yaml down
 
 .PHONY: docker-compose-build
 docker-compose-build:

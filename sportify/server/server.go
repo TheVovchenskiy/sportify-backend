@@ -101,6 +101,7 @@ func (s *Server) Run(ctx context.Context, configFile []string) error {
 		r.Put("/event/sub/{id}", handler.SubscribeEvent)
 		r.Post("/event", handler.CreateEventSite)
 		r.Post("/upload", handler.UploadFile)
+		r.Get("/events/find", handler.FindEvents)
 
 		r.Get("/img/*", func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Path == "/img/" {

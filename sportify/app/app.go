@@ -17,6 +17,7 @@ type EventStorage interface {
 	DeleteEvent(ctx context.Context, userID, eventID uuid.UUID) error
 	GetEvents(ctx context.Context) ([]models.ShortEvent, error)
 	GetCreatorID(ctx context.Context, eventID uuid.UUID) (uuid.UUID, error)
+	FindEvents(ctx context.Context, filterParams *models.FilterParams) ([]models.ShortEvent, error)
 	GetEvent(ctx context.Context, id uuid.UUID) (*models.FullEvent, error)
 	SubscribeEvent(ctx context.Context, id uuid.UUID, userID uuid.UUID, subscribe bool) (*models.ResponseSubscribeEvent, error)
 }
@@ -129,6 +130,10 @@ func (a *App) DeleteEvent(ctx context.Context, userID uuid.UUID, eventID uuid.UU
 
 func (a *App) GetEvents(ctx context.Context) ([]models.ShortEvent, error) {
 	return a.eventStorage.GetEvents(ctx)
+}
+
+func (a *App) FindEvents(ctx context.Context, filterParams *models.FilterParams) ([]models.ShortEvent, error) {
+	return a.eventStorage.FindEvents(ctx, filterParams)
 }
 
 func (a *App) GetEvent(ctx context.Context, id uuid.UUID) (*models.FullEvent, error) {

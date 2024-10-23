@@ -3,6 +3,7 @@ module github.com/TheVovchenskiy/sportify-backend
 go 1.23.0
 
 require (
+	github.com/Masterminds/squirrel v1.5.4
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/go-park-mail-ru/2023_2_Rabotyagi v0.0.0-20231227220914-3122bccece71
 	github.com/google/uuid v1.6.0
@@ -49,6 +50,8 @@ require (
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.17.2 // indirect
+	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
+	github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect

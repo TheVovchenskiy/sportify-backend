@@ -7,6 +7,7 @@ import (
 
 	"github.com/TheVovchenskiy/sportify-backend/models"
 
+	"github.com/Masterminds/squirrel"
 	"github.com/go-park-mail-ru/2023_2_Rabotyagi/pkg/repository"
 	"github.com/google/uuid"
 	pgx "github.com/jackc/pgx/v5"
@@ -212,17 +213,7 @@ func NewPostgresStorage(ctx context.Context, urlDataBase string) (*PostgresStora
 	return &PostgresStorage{pool: pool}, nil
 }
 
-func (p *PostgresStorage) GetEvents(ctx context.Context) ([]models.ShortEvent, error) {
-	sqlSelect := `SELECT id, creator_id, sport_type, address, date_start, start_time,
-		end_time, price, game_level, capacity, busy,
-		subscriber_ids, url_preview, url_photos
-		FROM "public".event WHERE deleted_at IS NULL;`
-
-	rawRows, err := p.pool.Query(ctx, sqlSelect)
-	if err != nil {
-		return nil, fmt.Errorf("select events: %w", err)
-	}
-
+func getSQLEvents(rawRows pgx.Rows) ([]models.ShortEvent, error) {
 	var (
 		curEvent      models.ShortEvent
 		result        []models.ShortEvent
@@ -230,7 +221,7 @@ func (p *PostgresStorage) GetEvents(ctx context.Context) ([]models.ShortEvent, e
 		rawGameLevels pgtype.Array[*string]
 	)
 
-	_, err = pgx.ForEachRow(
+	_, err := pgx.ForEachRow(
 		rawRows,
 		[]any{
 			&curEvent.ID, &curEvent.CreatorID, &curEvent.SportType, &curEvent.Address, &curEvent.Date,
@@ -261,8 +252,66 @@ func (p *PostgresStorage) GetEvents(ctx context.Context) ([]models.ShortEvent, e
 			return nil
 		})
 	if err != nil {
-		return nil, fmt.Errorf("to get events: %w", err)
+		return nil, fmt.Errorf("get events: %w", err)
 	}
 
 	return result, nil
+}
+
+func (p *PostgresStorage) GetEvents(ctx context.Context) ([]models.ShortEvent, error) {
+	sqlSelect := `SELECT id, creator_id, sport_type, address, date_start, start_time,
+		end_time, price, game_level, capacity, busy,
+		subscriber_ids, url_preview, url_photos
+		FROM "public".event WHERE deleted_at IS NULL;`
+
+	rawRows, err := p.pool.Query(ctx, sqlSelect)
+	if err != nil {
+		return nil, fmt.Errorf("select events: %w", err)
+	}
+
+	return getSQLEvents(rawRows)
+}
+
+//nolint:lll
+func (p *PostgresStorage) FindEvents(ctx context.Context, filterParams *models.FilterParams) ([]models.ShortEvent, error) {
+	query := squirrel.Select(`id, creator_id, sport_type, address, date_start, start_time,
+		end_time, price, game_level, capacity, busy,
+		subscriber_ids, url_preview, url_photos`).From(`"public".event`).PlaceholderFormat(squirrel.Dollar)
+
+	if len(filterParams.SportTypes) > 0 {
+		query = query.Where(squirrel.Eq{"sport_type": filterParams.SportTypes})
+	}
+
+	if len(filterParams.GameLevels) > 0 {
+		query = query.Where(squirrel.Eq{"game_level": filterParams.GameLevels})
+	}
+	if len(filterParams.DateStarts) > 0 {
+		query = query.Where(squirrel.Eq{"date_start": filterParams.DateStarts})
+	}
+
+	if filterParams.PriceMin != nil {
+		query = query.Where(squirrel.GtOrEq{"price": *filterParams.PriceMin})
+	}
+
+	if filterParams.PriceMax != nil {
+		query = query.Where(squirrel.LtOrEq{"price": *filterParams.PriceMax})
+	}
+
+	if filterParams.FreePlaces != nil {
+		query = query.Where(squirrel.Expr("capacity - busy >= ?", *filterParams.FreePlaces))
+	}
+
+	query = query.OrderBy(filterParams.OrderBy + " " + filterParams.SortOrder)
+
+	sql, args, err := query.ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("query to sql: %w", err)
+	}
+
+	rawRows, err := p.pool.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("select events: %w", err)
+	}
+
+	return getSQLEvents(rawRows)
 }
