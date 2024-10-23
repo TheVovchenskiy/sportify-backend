@@ -76,7 +76,7 @@ func (s *Server) Run(ctx context.Context, configFile []string) error {
 
 	logger.Infof("Config: %v", cfg)
 
-	config.WatchRemoteConfig(logger)
+	// config.WatchRemoteConfig(logger)
 
 	postgresStorage, err := db.NewPostgresStorage(ctx, cfg.Postgres.URL)
 	if err != nil {

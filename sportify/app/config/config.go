@@ -82,6 +82,7 @@ type Config struct {
 		URL      string `mapstructure:"url"`
 		DB       string `mapstructure:"db"`
 		User     string `mapstructure:"user"`
+		// TODO: remove this string and create it from 3 strings above
 		Password string `mapstructure:"password"`
 	}
 
