@@ -39,4 +39,4 @@ docker-compose-down:
 
 .PHONY: docker-compose-build
 docker-compose-build:
-	docker compose -f deploy/docker-compose.yaml build
+	docker compose --project-directory . -f deploy/docker-compose.yaml build
