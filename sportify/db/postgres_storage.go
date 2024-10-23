@@ -259,10 +259,13 @@ func getSQLEvents(rawRows pgx.Rows) ([]models.ShortEvent, error) {
 }
 
 func (p *PostgresStorage) GetEvents(ctx context.Context) ([]models.ShortEvent, error) {
-	sqlSelect := `SELECT id, creator_id, sport_type, address, date_start, start_time,
-		end_time, price, game_level, capacity, busy,
-		subscriber_ids, url_preview, url_photos
-		FROM "public".event WHERE deleted_at IS NULL;`
+	sqlSelect := `
+	SELECT id, creator_id, sport_type, address, date_start, start_time,
+       end_time, price, game_level, capacity, busy,
+       subscriber_ids, url_preview, url_photos
+	FROM "public".event WHERE deleted_at IS NULL AND
+	                          start_time > NOW() - INTERVAL '1 day'
+	ORDER BY start_time;`
 
 	rawRows, err := p.pool.Query(ctx, sqlSelect)
 	if err != nil {

@@ -79,7 +79,7 @@ func (a *App) CreateEventSite(ctx context.Context, request *models.RequestEventC
 	return result, nil
 }
 
-var ErrForbiddenEditNotYourEvent = errors.New("вы не можете изменять не свой заказ")
+var ErrForbiddenEditNotYourEvent = errors.New("вы не можете изменять не свое событие")
 
 func (a *App) EditEventSite(ctx context.Context, request *models.RequestEventEditSite) (*models.FullEvent, error) {
 	preResult := models.NewFullEventSite(request.EventID, request.UserID, &request.EventEditSite)
