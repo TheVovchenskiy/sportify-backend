@@ -10,6 +10,7 @@ app:
   path_photos: "./photos"
   folder_id: "example_folder_id"
   iam_token: "example_iam_toker"
+  url_prefix_file: "http://127.0.0.1:8080/api/v1/img/"
 logger:
   production_mode: true
   logger_output: "stdout"

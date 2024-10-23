@@ -81,12 +81,12 @@ func (s *Server) Run(ctx context.Context, configFile []string) error {
 		return err
 	}
 
-	fsStorage, err := db.NewFileSystemStorage(cfg.PathPhotos)
+	fsStorage, err := db.NewFileSystemStorage(cfg.App.PathPhotos)
 	if err != nil {
 		return fmt.Errorf("to new fs storage: %w", err)
 	}
 
-	handler := api.NewHandler(app.NewApp(cfg.URLPrefixFile, fsStorage, postgresStorage), logger, cfg.FolderID, cfg.IAMToken)
+	handler := api.NewHandler(app.NewApp(cfg.App.URLPrefixFile, fsStorage, postgresStorage), logger, cfg.App.FolderID, cfg.App.IAMToken)
 
 	r := chi.NewRouter()
 	r.Route(cfg.App.APIPrefix, func(r chi.Router) {
