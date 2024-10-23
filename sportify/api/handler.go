@@ -480,6 +480,8 @@ func (h *Handler) TryCreateEvent(w http.ResponseWriter, r *http.Request) {
 
 	fullEvent.URLMessage = common.Ref(tgMessage.GetURLMessage())
 	fullEvent.URLAuthor = common.Ref(tgMessage.GetURLAuthor())
+	fullEvent.RawMessage = common.Ref(tgMessage.RawMessage)
+	fullEvent.Description = common.Ref(tgMessage.RawMessage)
 
 	resultFullEvent, err := h.app.CreateEventTg(ctx, fullEvent)
 	if err != nil {
