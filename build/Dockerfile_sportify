@@ -7,6 +7,7 @@ RUN apk add --no-cache make
 
 COPY sportify/main.go main.go
 COPY sportify/pkg pkg
+COPY sportify/cmd cmd
 COPY sportify/models models
 COPY sportify/api api
 COPY sportify/app app
@@ -19,7 +20,6 @@ COPY sportify/go.sum go.sum
 COPY Makefile .
 RUN make toolchain-migrate
 
-
 RUN go build -o sportify ./main.go
 
 #=========================================================================================
@@ -30,7 +30,7 @@ ARG CONFIG_FILE
 WORKDIR /var/sportify
 
 COPY --from=build /go/bin/migrate /var/sportify/migrate
-COPY --from=build /var/sportify/main main
+COPY --from=build /var/sportify/sportify sportify
 
 COPY ${CONFIG_FILE} /var/config/config.yaml
 COPY sportify/photos photos

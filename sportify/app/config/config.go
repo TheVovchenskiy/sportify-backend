@@ -171,6 +171,7 @@ func initConsul() error {
 
 // WatchRemoteConfig runs go routines that watch for changes in the remote config and updates the viper config.
 func WatchRemoteConfig(logger *mylogger.MyLogger) {
+	// TODO: watch only when remote is set
 	logger.Info("watching remote config")
 	go watchConsul(logger)
 }
