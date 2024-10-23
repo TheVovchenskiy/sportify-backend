@@ -1,10 +1,9 @@
 bot:
   bot_token: "example_bot_token"
   port: ":8090"
+  api_url: "http://localhost:8090/api/v1/message"
 
-# sportify
 app:
-  api_url: "http://127.0.0.1:8080/api/v1/img/"
   port: ":8080"
   api_prefix: "/api/v1/"
   path_photos: "./photos"
@@ -13,7 +12,7 @@ app:
   url_prefix_file: "http://127.0.0.1:8080/api/v1/img/"
 logger:
   production_mode: true
-  logger_output: "stdout"
-  logger_err_output: "stderr"
+  logger_output: ["stdout"]
+  logger_err_output: ["stderr"]
 postgres:
-  url_database: "postgres://postgres:postgres@postgres:5432/sportify?sslmode=disable"
+  url: "postgres://postgres:postgres@postgres:5432/sportify?sslmode=disable"

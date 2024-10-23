@@ -59,6 +59,8 @@ func GetGlobalConfig() *Config {
 	return globalConfig
 }
 
+// TODO: reconfigure config structure
+
 // Config is a struct that contains the configuration for the Sportify application.
 type Config struct {
 	App struct {
@@ -124,8 +126,6 @@ func initDefaults() {
 	viper.SetDefault("app.path_photos", "./photos")
 
 	viper.SetDefault("bot.port", "8090")
-
-	viper.SetDefault("postgres.url", "postgres://postgres:postgres@localhost:5432/sportify?sslmode=disable")
 
 	viper.SetDefault("consul.address", "localhost:8500")
 }

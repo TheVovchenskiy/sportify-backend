@@ -9,8 +9,8 @@ make docker-compose-build
 Сборка c помощью Makefile или вручную исполняя команды
 
 ```shell
-export CONFIG_FILE=config/config.example.yaml && \
-export POSTGRES_ENV_FILE=../config/postgres.example.env && \
+CONFIG_FILE=config/config.example.yaml \
+POSTGRES_ENV_FILE=config/postgres.example.env \
 make docker-compose-up
 ```
 
@@ -64,7 +64,6 @@ make toolchain
 Для запуска чисто бэка(без бд) на локалке:
 
 ```shell
-export CONFIG_FILE=config/config.example.yaml && \
 cd sportify && go run . --config-path=<path_to_config_dir>
 ```
 
