@@ -40,3 +40,8 @@ docker-compose-down:
 .PHONY: docker-compose-build
 docker-compose-build:
 	docker compose --project-directory . -f deploy/docker-compose.yaml build
+
+names=backend_sportify
+.PHONY: docker-compose-logs
+docker-compose-logs:
+	docker compose --project-directory . -f deploy/docker-compose.yaml logs -f $(names)

@@ -74,7 +74,7 @@ func (s *Server) Run(ctx context.Context, configFile []string) error {
 	defer logger.Sync()
 	s.logger = logger
 
-	logger.Infof("Config: %v", cfg)
+	logger.Debugf("Config: %v", cfg)
 
 	// config.WatchRemoteConfig(logger)
 

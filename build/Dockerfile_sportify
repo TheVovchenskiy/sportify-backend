@@ -25,14 +25,11 @@ RUN go build -o sportify ./main.go
 #=========================================================================================
 FROM alpine:3.20 AS production
 
-ARG CONFIG_FILE
-
 WORKDIR /var/sportify
 
 COPY --from=build /go/bin/migrate /var/sportify/migrate
 COPY --from=build /var/sportify/sportify sportify
 
-COPY ${CONFIG_FILE} /var/config/config.yaml
 COPY sportify/photos photos
 COPY sportify/db/migrations migrations
 COPY sportify/db/fill.sql fill.sql

@@ -19,8 +19,6 @@ services:
   backend_sportify:
     build:
       dockerfile: ./build/Dockerfile_sportify
-      args:
-        - CONFIG_FILE=${CONFIG_FILE}
     restart: always
     ports:
       - "8080:8080"
@@ -30,6 +28,7 @@ services:
         condition: service_healthy
     volumes:
       - ./sportify/photos:/var/sportify/photos
+      - ${CONFIG_FILE}:/var/config/config.yaml
   consul:
     image: hashicorp/consul:1.19
     ports:
