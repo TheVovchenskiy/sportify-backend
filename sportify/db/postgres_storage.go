@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/TheVovchenskiy/sportify-backend/models"
 
@@ -263,8 +264,7 @@ func (p *PostgresStorage) GetEvents(ctx context.Context) ([]models.ShortEvent, e
 	SELECT id, creator_id, sport_type, address, date_start, start_time,
        end_time, price, game_level, capacity, busy,
        subscriber_ids, url_preview, url_photos
-	FROM "public".event WHERE deleted_at IS NULL AND
-	                          start_time > NOW() - INTERVAL '1 day'
+	FROM "public".event WHERE deleted_at IS NULL AND start_time > NOW() - INTERVAL '1 day'
 	ORDER BY start_time;`
 
 	rawRows, err := p.pool.Query(ctx, sqlSelect)
@@ -279,7 +279,11 @@ func (p *PostgresStorage) GetEvents(ctx context.Context) ([]models.ShortEvent, e
 func (p *PostgresStorage) FindEvents(ctx context.Context, filterParams *models.FilterParams) ([]models.ShortEvent, error) {
 	query := squirrel.Select(`id, creator_id, sport_type, address, date_start, start_time,
 		end_time, price, game_level, capacity, busy,
-		subscriber_ids, url_preview, url_photos`).From(`"public".event`).PlaceholderFormat(squirrel.Dollar)
+		subscriber_ids, url_preview, url_photos`).
+		From(`"public".event`).
+		PlaceholderFormat(squirrel.Dollar).
+		Where(squirrel.Eq{"deleted_at": nil}).
+		Where(squirrel.Gt{"start_time": time.Now().Add(-24 * time.Hour)})
 
 	if len(filterParams.SportTypes) > 0 {
 		query = query.Where(squirrel.Eq{"sport_type": filterParams.SportTypes})

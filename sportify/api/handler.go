@@ -205,6 +205,7 @@ func (h *Handler) GetEvents(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	events, err := h.app.GetEvents(ctx)
+	h.logger.WithCtx(ctx).Info("Got events", events)
 	if err != nil {
 		h.handleGetEventsError(ctx, w, err)
 		return
