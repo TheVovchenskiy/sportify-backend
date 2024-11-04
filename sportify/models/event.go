@@ -13,24 +13,6 @@ const (
 	CreationTypeSite CreationType = "site"
 )
 
-const (
-	SportTypeVolleyball SportType = "volleyball"
-	SportTypeBasketball SportType = "basketball"
-	SportTypeFootball   SportType = "football"
-)
-
-type SportType string
-
-const (
-	GameLevelLow      GameLevel = "low"
-	GameLevelMidMinus GameLevel = "mid_minus"
-	GameLevelMid      GameLevel = "mid"
-	GameLevelMidPlus  GameLevel = "mid_plus"
-	GameLevelHigh     GameLevel = "high"
-)
-
-type GameLevel string
-
 type FullEvent struct {
 	ShortEvent
 	URLAuthor    *string

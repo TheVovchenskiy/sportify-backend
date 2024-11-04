@@ -5,9 +5,8 @@ import (
 	"sync"
 	"time"
 
-	// consulapi "github.com/hashicorp/consul/api"
-	// vaultapi "github.com/hashicorp/vault/api"
 	"github.com/TheVovchenskiy/sportify-backend/pkg/mylogger"
+
 	"github.com/spf13/viper"
 	_ "github.com/spf13/viper/remote" // for consul
 )
@@ -79,9 +78,9 @@ type Config struct {
 	}
 
 	Postgres struct {
-		URL      string `mapstructure:"url"`
-		DB       string `mapstructure:"db"`
-		User     string `mapstructure:"user"`
+		URL  string `mapstructure:"url"`
+		DB   string `mapstructure:"db"`
+		User string `mapstructure:"user"`
 		// TODO: remove this string and create it from 3 strings above
 		Password string `mapstructure:"password"`
 	}
