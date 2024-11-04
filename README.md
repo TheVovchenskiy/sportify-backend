@@ -3,16 +3,16 @@
 При изменениях вначале пересобираем:
 
 ```shell
-export CONFIG_FILE=./config/config.example.yaml \
-export POSTGRES_ENV_FILE=config/postgres.example.env \
+export CONFIG_FILE=./config/config.example.yaml && \
+export POSTGRES_ENV_FILE=config/postgres.example.env && \
 make docker-compose-build
 ```
 
 Сборка c помощью Makefile или вручную исполняя команды
 
 ```shell
-export CONFIG_FILE=./config/config.example.yaml \
-export POSTGRES_ENV_FILE=config/postgres.example.env \
+export CONFIG_FILE=./config/config.example.yaml && \ 
+export POSTGRES_ENV_FILE=config/postgres.example.env && \
 make docker-compose-up
 ```
 
