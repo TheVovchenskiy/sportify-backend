@@ -11,6 +11,21 @@ import (
 	"github.com/google/uuid"
 )
 
+type ResponsesPayment struct {
+	PaymentStatus PaymentStatus `json:"payment_status"`
+}
+
+type RequestEventPay struct {
+	RedirectURL string    `json:"redirect_url"`
+	UserID      uuid.UUID `json:"user_id"`
+	EventID     uuid.UUID `json:"event_id"`
+}
+
+type ResponseEventPay struct {
+	ID              uuid.UUID `json:"id"`
+	ConfirmationURL string    `json:"confirmation_url"`
+}
+
 type RequestEventDelete struct {
 	UserID uuid.UUID `json:"user_id"`
 }

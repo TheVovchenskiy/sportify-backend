@@ -9,7 +9,14 @@ app:
   path_photos: "./photos"
   folder_id: "example_folder_id"
   iam_token: "example_iam_toker"
+  token_payment: "example_yookassa_token_payment"
+  token_payout: "example_yookassa_token_payout"
   url_prefix_file: "http://127.0.0.1:8080/api/v1/img/"
+  yookassa:
+    shop_id: "example_shop_id"
+    agent_id: "example_agent_id"
+    token_payment: "example_yookassa_token_payment"
+    token_payout: "example_yookassa_token_payout"
 logger:
   production_mode: true
   logger_output: ["stdout"]

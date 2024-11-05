@@ -2,9 +2,11 @@ package app
 
 import (
 	"context"
+	"crypto/sha512"
 	"errors"
 	"fmt"
 
+	"github.com/TheVovchenskiy/sportify-backend/app/yookassa"
 	"github.com/TheVovchenskiy/sportify-backend/db"
 	"github.com/TheVovchenskiy/sportify-backend/models"
 
@@ -29,20 +31,37 @@ type FileStorage interface {
 
 var _ FileStorage = (*db.FileSystemStorage)(nil)
 
+type YookassaClient interface {
+	DoPayment(ctx context.Context, idempotencyKey, redirectURL string, amount float64) (*models.Payment, error)
+}
+
+var _ YookassaClient = (*yookassa.Client)(nil)
+
 //go:generate mockgen -source=app.go -destination=mocks/app.go -package=mocks EventStorage
 
 type App struct {
-	urlPrefixFile string
-	fileStorage   FileStorage
-	eventStorage  EventStorage
+	urlPrefixFile  string
+	fileStorage    FileStorage
+	eventStorage   EventStorage
+	yookassaClient YookassaClient
 }
 
 //var _ EventStorage = (*db.SimpleEventStorage)(nil)
 
 var _ EventStorage = (*db.PostgresStorage)(nil)
 
-func NewApp(urlPrefixFile string, fileStorage FileStorage, eventStorage EventStorage) *App {
-	return &App{urlPrefixFile: urlPrefixFile, eventStorage: eventStorage, fileStorage: fileStorage}
+func NewApp(
+	urlPrefixFile string,
+	fileStorage FileStorage,
+	eventStorage EventStorage,
+	yookassaClient YookassaClient,
+) *App {
+	return &App{
+		urlPrefixFile:  urlPrefixFile,
+		eventStorage:   eventStorage,
+		fileStorage:    fileStorage,
+		yookassaClient: yookassaClient,
+	}
 }
 
 var (
@@ -142,4 +161,36 @@ func (a *App) GetEvent(ctx context.Context, id uuid.UUID) (*models.FullEvent, er
 
 func (a *App) SubscribeEvent(ctx context.Context, id uuid.UUID, userID uuid.UUID, subscribe bool) (*models.ResponseSubscribeEvent, error) {
 	return a.eventStorage.SubscribeEvent(ctx, id, userID, subscribe)
+}
+
+var ErrPayFree = errors.New("вы не можете оплатить бесплатное событие")
+
+func (a *App) PayEvent(ctx context.Context, request *models.RequestEventPay) (*models.ResponseEventPay, error) {
+	fullEvent, err := a.GetEvent(ctx, request.EventID)
+	if err != nil {
+		return nil, fmt.Errorf("to get event: %w", err)
+	}
+
+	if fullEvent.IsFree || fullEvent.Price == nil {
+		return nil, ErrPayFree
+	}
+
+	amount := float64(*fullEvent.Price)
+
+	idempotencyKey := string(sha512.New().Sum([]byte(request.EventID.String() + request.UserID.String())))
+
+	payment, err := a.yookassaClient.DoPayment(ctx, idempotencyKey, request.RedirectURL, amount)
+	if err != nil {
+		return nil, fmt.Errorf("to do payment: %w", err)
+	}
+
+	payment.UserID = request.UserID
+	payment.EventID = request.EventID
+
+	// TODO add to database payment
+
+	return &models.ResponseEventPay{
+		ID:              payment.ID,
+		ConfirmationURL: payment.ConfirmationURL,
+	}, nil
 }
