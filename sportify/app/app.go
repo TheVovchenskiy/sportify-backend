@@ -227,7 +227,7 @@ func (a *App) GetPayment(ctx context.Context, paymentID uuid.UUID) (*models.Resp
 
 		mapPayment[paymentID.String()] = struct{}{}
 		go func() {
-			time.Sleep(time.Second * 3)
+			time.Sleep(time.Second * 30)
 			ctx := context.TODO()
 			err := a.paymentPayoutStorage.UpdateStatusPayment(ctx, paymentID, models.PaymentStatusPaid)
 			if err != nil {
