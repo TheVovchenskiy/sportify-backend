@@ -9,7 +9,9 @@ import (
 	"net/http"
 
 	"github.com/TheVovchenskiy/sportify-backend/app"
+	"github.com/TheVovchenskiy/sportify-backend/db"
 	"github.com/TheVovchenskiy/sportify-backend/models"
+	"github.com/TheVovchenskiy/sportify-backend/pkg/api"
 )
 
 func (h *Handler) handlePayEventError(ctx context.Context, w http.ResponseWriter, errOutside error) {
@@ -20,6 +22,8 @@ func (h *Handler) handlePayEventError(ctx context.Context, w http.ResponseWriter
 		models.WriteResponseError(w, models.NewResponseBadRequestErr("", errOutside.Error()))
 	case errors.Is(errOutside, app.ErrPayFree):
 		models.WriteResponseError(w, models.NewResponseBadRequestErr("", app.ErrPayFree.Error()))
+	case errors.Is(errOutside, db.ErrNotFoundEvent):
+		models.WriteResponseError(w, models.NewResponseNotFoundErr("", db.ErrNotFoundEvent.Error()))
 	default:
 		models.WriteResponseError(w, models.NewResponseInternalServerErr("", models.InternalServerErrMessage))
 	}
@@ -27,7 +31,7 @@ func (h *Handler) handlePayEventError(ctx context.Context, w http.ResponseWriter
 
 var ErrRequestEventPay = errors.New("некорректный запрос на оплату события")
 
-func (h *Handler) PayEvent(r *http.Request, w http.ResponseWriter) {
+func (h *Handler) PayEvent(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	body, err := io.ReadAll(r.Body)
@@ -53,4 +57,33 @@ func (h *Handler) PayEvent(r *http.Request, w http.ResponseWriter) {
 	}
 
 	models.WriteJSONResponse(w, responseEventPay)
+}
+
+func (h *Handler) handleGetPaymentError(ctx context.Context, w http.ResponseWriter, errOutside error) {
+	h.logger.WithCtx(ctx).Error(errOutside)
+
+	switch {
+	case errors.Is(errOutside, db.ErrNotFoundPayment):
+		models.WriteResponseError(w, models.NewResponseNotFoundErr("", db.ErrNotFoundPayment.Error()))
+	default:
+		models.WriteResponseError(w, models.NewResponseInternalServerErr("", models.InternalServerErrMessage))
+	}
+}
+
+func (h *Handler) GetPayment(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	id, err := api.GetUUID(r, "id")
+	if err != nil {
+		h.handleGetPaymentError(ctx, w, err)
+		return
+	}
+
+	payment, err := h.app.GetPayment(ctx, id)
+	if err != nil {
+		h.handleGetPaymentError(ctx, w, err)
+		return
+	}
+
+	models.WriteJSONResponse(w, payment)
 }

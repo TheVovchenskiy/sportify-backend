@@ -38,6 +38,7 @@ type App interface {
 	DetectEventMessage(text string, regexps []string, minMatches int) (bool, error)
 	SaveImage(ctx context.Context, file []byte) (string, error)
 	PayEvent(ctx context.Context, request *models.RequestEventPay) (*models.ResponseEventPay, error)
+	GetPayment(ctx context.Context, id uuid.UUID) (*models.ResponsesPayment, error)
 }
 
 var _ App = (*app.App)(nil)

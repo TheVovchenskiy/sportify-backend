@@ -205,13 +205,13 @@ func (p *PostgresStorage) SubscribeEvent(
 	return &responseSubscribeEvent, nil
 }
 
-func NewPostgresStorage(ctx context.Context, urlDataBase string) (*PostgresStorage, error) {
+func NewPostgresStorage(ctx context.Context, urlDataBase string) (*PostgresStorage, *pgxpool.Pool, error) {
 	pool, err := repository.NewPgxPool(ctx, urlDataBase)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return &PostgresStorage{pool: pool}, nil
+	return &PostgresStorage{pool: pool}, pool, nil
 }
 
 func getSQLEvents(rawRows pgx.Rows) ([]models.ShortEvent, error) {
@@ -321,4 +321,16 @@ func (p *PostgresStorage) FindEvents(ctx context.Context, filterParams *models.F
 	}
 
 	return getSQLEvents(rawRows)
+}
+
+func (p *PostgresStorage) AddUserPaid(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
+	sqlUpdate := `
+	UPDATE public.event SET user_paid_ids = ARRAY_APPEND(user_paid_ids, $1) WHERE id = $2;`
+
+	_, err := p.pool.Exec(ctx, sqlUpdate, userID, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -56,9 +56,12 @@ func (c *Client) DoPayment(
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to do request: %w", err)
+		return nil, fmt.Errorf("to do request: %w", err)
 	}
 	defer resp.Body.Close()
+
+	//body, err := io.ReadAll(resp.Body)
+	//fmt.Println(string(body), err)
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)

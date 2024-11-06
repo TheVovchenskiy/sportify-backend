@@ -2,9 +2,10 @@ package app
 
 import (
 	"context"
-	"crypto/sha512"
 	"errors"
 	"fmt"
+	"sync"
+	"time"
 
 	"github.com/TheVovchenskiy/sportify-backend/app/yookassa"
 	"github.com/TheVovchenskiy/sportify-backend/db"
@@ -22,7 +23,12 @@ type EventStorage interface {
 	FindEvents(ctx context.Context, filterParams *models.FilterParams) ([]models.ShortEvent, error)
 	GetEvent(ctx context.Context, id uuid.UUID) (*models.FullEvent, error)
 	SubscribeEvent(ctx context.Context, id uuid.UUID, userID uuid.UUID, subscribe bool) (*models.ResponseSubscribeEvent, error)
+	AddUserPaid(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
 }
+
+//var _ EventStorage = (*db.SimpleEventStorage)(nil)
+
+var _ EventStorage = (*db.PostgresStorage)(nil)
 
 type FileStorage interface {
 	SaveFile(ctx context.Context, file []byte, fileName string) error
@@ -37,30 +43,37 @@ type YookassaClient interface {
 
 var _ YookassaClient = (*yookassa.Client)(nil)
 
+type PaymentPayoutStorage interface {
+	CreatePayment(ctx context.Context, payment *models.Payment) error
+	GetPayment(ctx context.Context, id uuid.UUID) (*models.Payment, error)
+	UpdateStatusPayment(ctx context.Context, id uuid.UUID, status models.PaymentStatus) error
+}
+
+var _ PaymentPayoutStorage = (*db.PostgresPaymentPayoutStorage)(nil)
+
 //go:generate mockgen -source=app.go -destination=mocks/app.go -package=mocks EventStorage
 
 type App struct {
-	urlPrefixFile  string
-	fileStorage    FileStorage
-	eventStorage   EventStorage
-	yookassaClient YookassaClient
+	urlPrefixFile        string
+	fileStorage          FileStorage
+	eventStorage         EventStorage
+	paymentPayoutStorage PaymentPayoutStorage
+	yookassaClient       YookassaClient
 }
-
-//var _ EventStorage = (*db.SimpleEventStorage)(nil)
-
-var _ EventStorage = (*db.PostgresStorage)(nil)
 
 func NewApp(
 	urlPrefixFile string,
 	fileStorage FileStorage,
 	eventStorage EventStorage,
+	paymentPayoutStorage PaymentPayoutStorage,
 	yookassaClient YookassaClient,
 ) *App {
 	return &App{
-		urlPrefixFile:  urlPrefixFile,
-		eventStorage:   eventStorage,
-		fileStorage:    fileStorage,
-		yookassaClient: yookassaClient,
+		urlPrefixFile:        urlPrefixFile,
+		eventStorage:         eventStorage,
+		fileStorage:          fileStorage,
+		paymentPayoutStorage: paymentPayoutStorage,
+		yookassaClient:       yookassaClient,
 	}
 }
 
@@ -177,9 +190,9 @@ func (a *App) PayEvent(ctx context.Context, request *models.RequestEventPay) (*m
 
 	amount := float64(*fullEvent.Price)
 
-	idempotencyKey := string(sha512.New().Sum([]byte(request.EventID.String() + request.UserID.String())))
+	idempotencyKey := []byte(request.EventID.String() + request.UserID.String())[:64]
 
-	payment, err := a.yookassaClient.DoPayment(ctx, idempotencyKey, request.RedirectURL, amount)
+	payment, err := a.yookassaClient.DoPayment(ctx, string(idempotencyKey), request.RedirectURL, amount)
 	if err != nil {
 		return nil, fmt.Errorf("to do payment: %w", err)
 	}
@@ -187,10 +200,57 @@ func (a *App) PayEvent(ctx context.Context, request *models.RequestEventPay) (*m
 	payment.UserID = request.UserID
 	payment.EventID = request.EventID
 
-	// TODO add to database payment
+	err = a.paymentPayoutStorage.CreatePayment(ctx, payment)
+	if err != nil {
+		return nil, fmt.Errorf("to create payment: %w", err)
+	}
 
 	return &models.ResponseEventPay{
 		ID:              payment.ID,
 		ConfirmationURL: payment.ConfirmationURL,
 	}, nil
+}
+
+var (
+	mapPayment = map[string]struct{}{}
+	muPayment  = sync.RWMutex{}
+)
+
+func (a *App) GetPayment(ctx context.Context, paymentID uuid.UUID) (*models.ResponsesPayment, error) {
+	go func() {
+		// TODO add check payment status, do payout
+		muPayment.Lock()
+		if _, ok := mapPayment[paymentID.String()]; ok {
+			muPayment.Unlock()
+			return
+		}
+
+		mapPayment[paymentID.String()] = struct{}{}
+		go func() {
+			time.Sleep(time.Second * 3)
+			ctx := context.TODO()
+			err := a.paymentPayoutStorage.UpdateStatusPayment(ctx, paymentID, models.PaymentStatusPaid)
+			if err != nil {
+				fmt.Println("update status payment: ", err)
+			}
+
+			payment, err := a.paymentPayoutStorage.GetPayment(ctx, paymentID)
+			if err != nil {
+				fmt.Println("get payment: ", err)
+			}
+
+			err = a.eventStorage.AddUserPaid(ctx, payment.EventID, payment.UserID)
+			if err != nil {
+				fmt.Println("add user paid: ", err)
+			}
+		}()
+		muPayment.Unlock()
+	}()
+
+	payment, err := a.paymentPayoutStorage.GetPayment(ctx, paymentID)
+	if err != nil {
+		return nil, fmt.Errorf("to get payment: %w", err)
+	}
+
+	return &models.ResponsesPayment{PaymentStatus: payment.Status}, nil
 }
