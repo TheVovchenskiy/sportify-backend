@@ -81,6 +81,14 @@ func (c *Client) DoPayment(
 		return nil, fmt.Errorf("unexpected amount: %f", responseAmount)
 	}
 
+	if responsePayment.Status == "succeeded" {
+		responsePayment.Status = "paid"
+	} else if responsePayment.Status == "canceled" {
+		responsePayment.Status = "canceled"
+	} else {
+		responsePayment.Status = "pending"
+	}
+
 	return &models.Payment{ //nolint:exhaustruct
 		ID:              responsePayment.ID,
 		ConfirmationURL: responsePayment.Confirmation.ConfirmationURL,
