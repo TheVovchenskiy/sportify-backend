@@ -29,9 +29,10 @@ fill-db:
 	docker cp sportify/db/fill.sql sportify-backend-postgres-1:fill.sql
 	docker exec -it sportify-backend-postgres-1 psql -U postgres -d sportify -f fill.sql
 
+up_names=
 .PHONY: docker-compose-up
 docker-compose-up:
-	docker compose --project-directory . -f deploy/docker-compose.yaml up -d
+	docker compose --project-directory . -f deploy/docker-compose.yaml up -d $(up_names)
 
 .PHONY: docker-compose-down
 docker-compose-down:
@@ -45,3 +46,7 @@ names=backend_sportify
 .PHONY: docker-compose-logs
 docker-compose-logs:
 	docker compose --project-directory . -f deploy/docker-compose.yaml logs -f $(names)
+
+.PHONY: gen-cert
+gen-cert:
+	openssl req -x509 -sha256 -nodes -subj "/C=RU/ST=Moscow/L=Moscow/O=Sportify/CN=localhost" -newkey rsa:2048 -days 365 -keyout config/localhost.key -out config/localhost.crt

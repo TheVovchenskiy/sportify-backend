@@ -108,10 +108,13 @@ func InitConfig(configFilePaths []string) error {
 
 	configFileErr := InitConfigFile(configFilePaths)
 
-	consulErr := initConsul()
-
-	if configFileErr != nil && consulErr != nil {
-		return fmt.Errorf("init config file and consul: %w, %w", configFileErr, consulErr)
+	//consulErr := initConsul()
+	//
+	//if configFileErr != nil && consulErr != nil {
+	//	return fmt.Errorf("init config file and consul: %w, %w", configFileErr, consulErr)
+	//}
+	if configFileErr != nil {
+		return fmt.Errorf("init config file: %w", configFileErr)
 	}
 
 	err := UpdateGlobalConfig()

@@ -2,3 +2,5 @@
 !.gitignore
 !config.example.yaml
 !postgres.example.env
+!nginx.conf
+!nginx.local.conf

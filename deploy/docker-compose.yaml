@@ -1,6 +1,16 @@
 version: "3.8"
 
 services:
+  nginx:
+    image: nginx:1.27-alpine
+    restart: always
+    volumes:
+      - ./config/nginx.conf:/etc/nginx/nginx.conf
+      - ./config/localhost.key:/etc/nginx/localhost.key
+      - ./config/localhost.crt:/etc/nginx/localhost.crt
+    ports:
+      - "443:443"
+    network_mode: "host"
   postgres:
     image: postgres:17.0-alpine3.20
     restart: always
@@ -29,18 +39,6 @@ services:
     volumes:
       - ./sportify/photos:/var/sportify/photos
       - ${CONFIG_FILE}:/var/config/config.yaml
-  consul:
-    image: hashicorp/consul:1.19
-    ports:
-      - "8500:8500"
-    volumes:
-      - consul:/consul/data
-  # vault:
-  #   image: hashicorp/vault
-  #   environment:
-  #     VAULT_DEV_ROOT_TOKEN_ID: 123
-  #   ports:
-  #     - "8200:8200"
 
 volumes:
   postgres:
