@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/TheVovchenskiy/sportify-backend/models"
+	"github.com/TheVovchenskiy/sportify-backend/pkg/mylogger"
+	"go.uber.org/zap"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/go-park-mail-ru/2023_2_Rabotyagi/pkg/repository"
@@ -14,6 +16,7 @@ import (
 	pgx "github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/lib/pq"
 )
 
 type PostgresStorage struct {
@@ -281,6 +284,13 @@ func (p *PostgresStorage) GetEvents(ctx context.Context) ([]models.ShortEvent, e
 
 //nolint:lll
 func (p *PostgresStorage) FindEvents(ctx context.Context, filterParams *models.FilterParams) ([]models.ShortEvent, error) {
+	logger, err := mylogger.Get()
+	if err != nil {
+		return nil, fmt.Errorf("get logger: %w", err)
+	}
+
+	logger.With(ctx).Infow("Getting events", zap.Any("filter_params", filterParams))
+
 	query := squirrel.Select(`id, creator_id, sport_type, address, date_start, start_time,
 		end_time, price, game_level, capacity, busy,
 		subscriber_ids, url_preview, url_photos`).
@@ -294,7 +304,7 @@ func (p *PostgresStorage) FindEvents(ctx context.Context, filterParams *models.F
 	}
 
 	if len(filterParams.GameLevels) > 0 {
-		query = query.Where(squirrel.Eq{"game_level": filterParams.GameLevels})
+		query = query.Where("game_level && ?", pq.Array(filterParams.GameLevels))
 	}
 	if len(filterParams.DateStarts) > 0 {
 		query = query.Where(squirrel.Eq{"date_start": filterParams.DateStarts})
@@ -318,6 +328,8 @@ func (p *PostgresStorage) FindEvents(ctx context.Context, filterParams *models.F
 	if err != nil {
 		return nil, fmt.Errorf("query to sql: %w", err)
 	}
+
+	logger.WithCtx(ctx).Infow("SQL query", zap.String("query", sql), zap.Any("args", args))
 
 	rawRows, err := p.pool.Query(ctx, sql, args...)
 	if err != nil {
