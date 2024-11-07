@@ -1,6 +1,11 @@
 # Sportify Backend
 
-При изменениях вначале пересобираем:
+### Уважаемые фронты, выполните эту команду один раз (дальше не надо будет). Чтобы на локалке сгенерить сертификаты.
+```shell
+make gen-cert
+```
+
+### При изменениях вначале пересобираем:
 
 ```shell
 export CONFIG_FILE=./config/config.example.yaml && \
@@ -8,7 +13,7 @@ export POSTGRES_ENV_FILE=config/postgres.example.env && \
 make docker-compose-build
 ```
 
-Сборка c помощью Makefile или вручную исполняя команды
+### Сборка c помощью Makefile или вручную исполняя команды
 
 ```shell
 export CONFIG_FILE=./config/config.example.yaml && \ 
@@ -16,19 +21,19 @@ export POSTGRES_ENV_FILE=config/postgres.example.env && \
 make docker-compose-up
 ```
 
-Для накатки миграций:
+### Для накатки миграций:
 
 ```shell
 make migration-up
 ```
 
-Если вдруг не сработало, попробуйте:
+### Если вдруг не сработало, попробуйте:
 
 ```shell
 make migration-up-reserve
 ```
 
-Заполнения бд (нужно только один раз) можно вручную исполнить из IDE [sql запрос](sportify/db/fill.sql) или
+### Для заполнения бд (нужно только один раз) можно вручную исполнить из IDE [sql запрос](sportify/db/fill.sql) или
 вот так:
 
 ```shell
@@ -39,12 +44,12 @@ make fill-db
 
 Все, вы прекрасны)
 
-Посмотреть логи только backend контейнера:
+### Посмотреть логи только backend контейнера:
 ```shell
 make docker-compose-logs
 ```
 
-### Для разработчиков
+### Для разработчиков, deprecated область, не надо исполнять, чтобы запустить бэк
 
 Установка го:
 
