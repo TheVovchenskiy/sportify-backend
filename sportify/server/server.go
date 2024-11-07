@@ -10,7 +10,6 @@ import (
 	"github.com/TheVovchenskiy/sportify-backend/api"
 	"github.com/TheVovchenskiy/sportify-backend/app"
 	"github.com/TheVovchenskiy/sportify-backend/app/config"
-	"github.com/TheVovchenskiy/sportify-backend/app/yookassa"
 	"github.com/TheVovchenskiy/sportify-backend/db"
 	sportifymiddleware "github.com/TheVovchenskiy/sportify-backend/pkg/middleware"
 	"github.com/TheVovchenskiy/sportify-backend/pkg/mylogger"
@@ -79,7 +78,7 @@ func (s *Server) Run(ctx context.Context, configFile []string) error {
 
 	// config.WatchRemoteConfig(logger)
 
-	postgresStorage, pool, err := db.NewPostgresStorage(ctx, cfg.Postgres.URL)
+	postgresStorage, _, err := db.NewPostgresStorage(ctx, cfg.Postgres.URL)
 	if err != nil {
 		return err
 	}
@@ -89,14 +88,7 @@ func (s *Server) Run(ctx context.Context, configFile []string) error {
 		return fmt.Errorf("to new fs storage: %w", err)
 	}
 
-	paymentPayoutStorage := db.NewPostgresPaymentPayoutStorage(pool)
-	yookassaClient := yookassa.NewClient(
-		cfg.App.Yookassa.ShopID, cfg.App.Yookassa.AgentID,
-		cfg.App.Yookassa.TokenPayment, cfg.App.Yookassa.TokenPayout,
-	)
-
-	appSportify := app.NewApp(cfg.App.URLPrefixFile, fsStorage, postgresStorage, paymentPayoutStorage, yookassaClient)
-	handler := api.NewHandler(appSportify, logger, cfg.App.FolderID, cfg.App.IAMToken)
+	handler := api.NewHandler(app.NewApp(cfg.App.URLPrefixFile, fsStorage, postgresStorage), logger, cfg.App.FolderID, cfg.App.IAMToken)
 
 	r := chi.NewRouter()
 	r.Route(cfg.App.APIPrefix, func(r chi.Router) {
@@ -104,16 +96,14 @@ func (s *Server) Run(ctx context.Context, configFile []string) error {
 		r.Use(middleware.Recoverer)
 		r.Use(middleware.RequestID)
 		r.Use(sportifymiddleware.Config)
-		r.Get("/events", handler.GetEvents)
+		r.Get("/events", handler.FindEvents)
 		r.Get("/event/{id}", handler.GetEvent)
 		r.Put("/event/{id}", handler.EditEventSite)
 		r.Delete("/event/{id}", handler.DeleteEvent)
 		r.Put("/event/sub/{id}", handler.SubscribeEvent)
 		r.Post("/event", handler.CreateEventSite)
-		r.Post("/event/pay", handler.PayEvent)
+		r.Get("/users/{id}/events", handler.GetUsersEvent)
 		r.Post("/upload", handler.UploadFile)
-		r.Get("/events/find", handler.FindEvents)
-		r.Get("/payment/{id}", handler.GetPayment)
 
 		r.Get("/img/*", func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Path == "/img/" {

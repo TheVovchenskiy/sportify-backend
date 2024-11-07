@@ -22,6 +22,7 @@ type EventStorage interface {
 	GetCreatorID(ctx context.Context, eventID uuid.UUID) (uuid.UUID, error)
 	FindEvents(ctx context.Context, filterParams *models.FilterParams) ([]models.ShortEvent, error)
 	GetEvent(ctx context.Context, id uuid.UUID) (*models.FullEvent, error)
+	GetUsersEvents(ctx context.Context, userID uuid.UUID) ([]models.ShortEvent, error)
 	SubscribeEvent(ctx context.Context, id uuid.UUID, userID uuid.UUID, subscribe bool) (*models.ResponseSubscribeEvent, error)
 	AddUserPaid(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
 }
@@ -65,15 +66,15 @@ func NewApp(
 	urlPrefixFile string,
 	fileStorage FileStorage,
 	eventStorage EventStorage,
-	paymentPayoutStorage PaymentPayoutStorage,
-	yookassaClient YookassaClient,
+	// paymentPayoutStorage PaymentPayoutStorage,
+	// yookassaClient YookassaClient,
 ) *App {
 	return &App{
-		urlPrefixFile:        urlPrefixFile,
-		eventStorage:         eventStorage,
-		fileStorage:          fileStorage,
-		paymentPayoutStorage: paymentPayoutStorage,
-		yookassaClient:       yookassaClient,
+		urlPrefixFile: urlPrefixFile,
+		eventStorage:  eventStorage,
+		fileStorage:   fileStorage,
+		// paymentPayoutStorage: paymentPayoutStorage,
+		// yookassaClient:       yookassaClient,
 	}
 }
 
@@ -170,6 +171,10 @@ func (a *App) FindEvents(ctx context.Context, filterParams *models.FilterParams)
 
 func (a *App) GetEvent(ctx context.Context, id uuid.UUID) (*models.FullEvent, error) {
 	return a.eventStorage.GetEvent(ctx, id)
+}
+
+func (a *App) GetUsersEvents(ctx context.Context, userID uuid.UUID) ([]models.ShortEvent, error) {
+	return a.eventStorage.GetUsersEvents(ctx, userID)
 }
 
 func (a *App) SubscribeEvent(ctx context.Context, id uuid.UUID, userID uuid.UUID, subscribe bool) (*models.ResponseSubscribeEvent, error) {

@@ -256,6 +256,10 @@ func getSQLEvents(rawRows pgx.Rows) ([]models.ShortEvent, error) {
 		return nil, fmt.Errorf("get events: %w", err)
 	}
 
+	if result == nil {
+		return []models.ShortEvent{}, nil
+	}
+
 	return result, nil
 }
 
@@ -316,6 +320,22 @@ func (p *PostgresStorage) FindEvents(ctx context.Context, filterParams *models.F
 	}
 
 	rawRows, err := p.pool.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("select events: %w", err)
+	}
+
+	return getSQLEvents(rawRows)
+}
+
+func (p *PostgresStorage) GetUsersEvents(ctx context.Context, userID uuid.UUID) ([]models.ShortEvent, error) {
+	sqlSelect := `
+	SELECT id, creator_id, sport_type, address, date_start, start_time,
+       end_time, price, game_level, capacity, busy,
+       subscriber_ids, url_preview, url_photos
+	FROM "public".event WHERE deleted_at IS NULL AND creator_id = $1
+	ORDER BY start_time;`
+
+	rawRows, err := p.pool.Query(ctx, sqlSelect, userID)
 	if err != nil {
 		return nil, fmt.Errorf("select events: %w", err)
 	}

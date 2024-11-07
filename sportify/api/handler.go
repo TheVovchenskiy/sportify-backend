@@ -29,6 +29,7 @@ type App interface {
 	GetEvents(ctx context.Context) ([]models.ShortEvent, error)
 	FindEvents(ctx context.Context, filterParams *models.FilterParams) ([]models.ShortEvent, error)
 	GetEvent(ctx context.Context, id uuid.UUID) (*models.FullEvent, error)
+	GetUsersEvents(ctx context.Context, userID uuid.UUID) ([]models.ShortEvent, error)
 	SubscribeEvent(
 		ctx context.Context,
 		id uuid.UUID,
@@ -93,6 +94,25 @@ func (h *Handler) CreateEventSite(w http.ResponseWriter, r *http.Request) {
 	}
 
 	models.WriteJSONResponse(w, fullEvent)
+}
+
+func (h *Handler) GetUsersEvent(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	userID, err := api.GetUUID(r, "id")
+	if err != nil {
+		h.handleSubscribeEventError(ctx, w, err)
+		return
+	}
+
+	events, err := h.app.GetUsersEvents(ctx, userID)
+	h.logger.WithCtx(ctx).Info("Got events", events)
+	if err != nil {
+		h.handleGetEventsError(ctx, w, err)
+		return
+	}
+
+	models.WriteJSONResponse(w, events)
 }
 
 func (h *Handler) handleEditEventSiteError(ctx context.Context, w http.ResponseWriter, errOutside error) {
