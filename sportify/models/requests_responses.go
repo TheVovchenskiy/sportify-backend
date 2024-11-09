@@ -55,8 +55,14 @@ type EventCreateSite struct {
 	URLPhotos   []string    `json:"photos"`
 }
 
+type TgParams struct {
+	UserID string `json:"user_id"`
+	ChatID string `json:"chat_id"`
+}
+
 type RequestEventCreateSite struct {
 	UserID      uuid.UUID       `json:"user_id"`
+	Tg          *TgParams       `json:"tg,omitempty"`
 	CreateEvent EventCreateSite `json:"event_create"`
 }
 

@@ -75,13 +75,13 @@ type Config struct {
 			TokenPayment string `mapstructure:"token_payment"`
 			TokenPayout  string `mapsctructure:"token_payout"`
 		}
-	}
+	} `mapstructure:"app"`
 
 	Logger struct {
 		ProductionMode  bool     `mapstructure:"production_mode"`
 		LoggerOutput    []string `mapstructure:"logger_output"`
 		LoggerErrOutput []string `mapstructure:"logger_err_output"`
-	}
+	} `mapstructure:"logger"`
 
 	Postgres struct {
 		URL  string `mapstructure:"url"`
@@ -89,17 +89,22 @@ type Config struct {
 		User string `mapstructure:"user"`
 		// TODO: remove this string and create it from 3 strings above
 		Password string `mapstructure:"password"`
-	}
+	} `mapstructure:"postgres"`
 
 	Bot struct {
 		APIURL string `mapstructure:"api_url"`
 		Port   string `mapstructure:"port"`
 		Token  string `mapstructure:"token"`
-	}
+	} `mapstructure:"bot"`
 
-	Consul struct {
-		Address string `mapstructure:"address"`
-	}
+	BotAPI struct {
+		BaseURL string `mapstructure:"base_url"`
+		Port    int    `mapstructure:"port"`
+	} `mapstructure:"bot_api"`
+
+	// Consul struct {
+	// 	Address string `mapstructure:"address"`
+	// }
 }
 
 func InitConfig(configFilePaths []string) error {
@@ -136,6 +141,9 @@ func initDefaults() {
 
 	viper.SetDefault("bot.port", "8090")
 
+	viper.SetDefault("bot_api.port", 8081)
+	viper.SetDefault("bot_api.base_url", "http://host.docker.internal")
+
 	viper.SetDefault("consul.address", "localhost:8500")
 }
 
@@ -163,20 +171,20 @@ func InitConfigFile(configPaths []string) error {
 	return nil
 }
 
-func initConsul() error {
-	consulAddress := viper.GetString("consul.address")
+// func initConsul() error {
+// 	consulAddress := viper.GetString("consul.address")
 
-	err := viper.AddRemoteProvider("consul", consulAddress, consulConfigPath)
-	if err != nil {
-		return fmt.Errorf("add consul provider: %w", err)
-	}
-	viper.SetConfigType("json")
-	err = viper.ReadRemoteConfig()
-	if err != nil {
-		return fmt.Errorf("read consul config: %w", err)
-	}
-	return nil
-}
+// 	err := viper.AddRemoteProvider("consul", consulAddress, consulConfigPath)
+// 	if err != nil {
+// 		return fmt.Errorf("add consul provider: %w", err)
+// 	}
+// 	viper.SetConfigType("json")
+// 	err = viper.ReadRemoteConfig()
+// 	if err != nil {
+// 		return fmt.Errorf("read consul config: %w", err)
+// 	}
+// 	return nil
+// }
 
 // WatchRemoteConfig runs go routines that watch for changes in the remote config and updates the viper config.
 func WatchRemoteConfig(logger *mylogger.MyLogger) {

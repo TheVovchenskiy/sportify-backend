@@ -9,6 +9,7 @@ import (
 
 	"github.com/TheVovchenskiy/sportify-backend/api"
 	"github.com/TheVovchenskiy/sportify-backend/app"
+	"github.com/TheVovchenskiy/sportify-backend/app/botapi"
 	"github.com/TheVovchenskiy/sportify-backend/app/config"
 	"github.com/TheVovchenskiy/sportify-backend/db"
 	sportifymiddleware "github.com/TheVovchenskiy/sportify-backend/pkg/middleware"
@@ -76,8 +77,6 @@ func (s *Server) Run(ctx context.Context, configFile []string) error {
 
 	logger.Debugf("Config: %v", cfg)
 
-	// config.WatchRemoteConfig(logger)
-
 	postgresStorage, _, err := db.NewPostgresStorage(ctx, cfg.Postgres.URL)
 	if err != nil {
 		return err
@@ -88,7 +87,12 @@ func (s *Server) Run(ctx context.Context, configFile []string) error {
 		return fmt.Errorf("to new fs storage: %w", err)
 	}
 
-	handler := api.NewHandler(app.NewApp(cfg.App.URLPrefixFile, fsStorage, postgresStorage, logger), logger, cfg.App.FolderID, cfg.App.IAMToken)
+	botAPI, err := botapi.NewBotAPI(cfg.BotAPI.BaseURL, cfg.BotAPI.Port)
+	if err != nil {
+		return fmt.Errorf("to new bot api: %w", err)
+	}
+
+	handler := api.NewHandler(app.NewApp(cfg.App.URLPrefixFile, fsStorage, postgresStorage, logger, botAPI), logger, cfg.App.FolderID, cfg.App.IAMToken)
 
 	r := chi.NewRouter()
 	r.Route(cfg.App.APIPrefix, func(r chi.Router) {

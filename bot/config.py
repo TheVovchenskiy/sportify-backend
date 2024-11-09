@@ -14,6 +14,7 @@ class BotConfig:
 
     token: str  # Bot token, defined only in environment variable BOT_TOKEN
     api_url: str  # API url, must contain 'http://' or 'https://', defined only in config file
+    front_url: str  # Base url of frontend, must contain 'http://' or 'https://', defined only in config file
 
     @classmethod
     def get(cls, config_path: str) -> "BotConfig":
@@ -23,15 +24,16 @@ class BotConfig:
             raise FileNotFoundError(f"Config file not found: {config_path}")
 
         env_config = BotConfig._from_env()
-        if "bot" not in yaml_config or "api_url" not in yaml_config["bot"]:
-            raise ValueError("api_url is not defined in config file")
+        if "bot" not in yaml_config or "api_url" not in yaml_config["bot"] or "front_url" not in yaml_config["bot"]:
+            raise ValueError("api_url or front_url is not defined in config file")
 
         api_url = yaml_config["bot"]["api_url"]
+        front_url = yaml_config["bot"]["front_url"]
         token = env_config["token"]
 
         config = {**yaml_config["bot"], **env_config}
 
-        return cls(token, api_url)
+        return cls(token, api_url, front_url)
 
     @staticmethod
     def _from_yaml(config_path: str) -> dict:

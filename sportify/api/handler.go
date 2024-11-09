@@ -515,4 +515,5 @@ func (h *Handler) TryCreateEvent(w http.ResponseWriter, r *http.Request) {
 	h.logger.WithCtx(ctx).Info(resultFullEvent)
 
 	w.WriteHeader(http.StatusOK)
+	models.WriteJSONResponse(w, resultFullEvent)
 }

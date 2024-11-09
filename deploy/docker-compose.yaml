@@ -39,6 +39,9 @@ services:
     volumes:
       - ./sportify/photos:/var/sportify/photos
       - ${CONFIG_FILE}:/var/config/config.yaml
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
 
 volumes:
   postgres:

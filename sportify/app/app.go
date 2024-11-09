@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"github.com/TheVovchenskiy/sportify-backend/pkg/mylogger"
 	"net/http"
 	"sync"
 	"time"
 
+	"github.com/TheVovchenskiy/sportify-backend/app/botapi"
 	"github.com/TheVovchenskiy/sportify-backend/app/yookassa"
 	"github.com/TheVovchenskiy/sportify-backend/db"
 	"github.com/TheVovchenskiy/sportify-backend/models"
@@ -41,6 +43,12 @@ type FileStorage interface {
 
 var _ FileStorage = (*db.FileSystemStorage)(nil)
 
+type BotAPI interface {
+	EventCreated(ctx context.Context, eventCreateRequest models.EventCreatedBotRequest) error
+}
+
+var _ BotAPI = (*botapi.BotAPI)(nil)
+
 type YookassaClient interface {
 	DoPayment(ctx context.Context, idempotencyKey, redirectURL string, amount float64) (*models.Payment, error)
 }
@@ -65,6 +73,7 @@ type App struct {
 	yookassaClient       YookassaClient
 	httpClient           *http.Client
 	logger               *mylogger.MyLogger
+	botAPI               BotAPI
 }
 
 func NewApp(
@@ -72,6 +81,7 @@ func NewApp(
 	fileStorage FileStorage,
 	eventStorage EventStorage,
 	logger *mylogger.MyLogger,
+	botAPI BotAPI,
 	// paymentPayoutStorage PaymentPayoutStorage,
 	// yookassaClient YookassaClient,
 ) *App {
@@ -81,6 +91,7 @@ func NewApp(
 		fileStorage:   fileStorage,
 		httpClient:    http.DefaultClient,
 		logger:        logger,
+		botAPI:        botAPI,
 		// paymentPayoutStorage: paymentPayoutStorage,
 		// yookassaClient:       yookassaClient,
 	}
@@ -127,6 +138,30 @@ func (a *App) CreateEventSite(ctx context.Context, request *models.RequestEventC
 	err := a.eventStorage.CreateEvent(ctx, result)
 	if err != nil {
 		return nil, fmt.Errorf("to create event: %w", err)
+	}
+
+	if request.Tg != nil {
+		chatID, err := strconv.ParseInt(request.Tg.ChatID, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("to parse chatID: %w", err)
+		}
+
+		userID, err := strconv.ParseInt(request.Tg.UserID, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("to parse userID: %w", err)
+		}
+
+		eventCreateRequest := models.EventCreatedBotRequest{
+			TgChatID: &chatID,
+			TgUserID: &userID,
+			Event:    result.ShortEvent,
+		}
+
+		err = a.botAPI.EventCreated(ctx, eventCreateRequest)
+		if err != nil {
+			// TODO: maybe we should consider not to send 500 error to user in this case
+			return nil, fmt.Errorf("to send to bot created event: %w", err)
+		}
 	}
 
 	return result, nil
