@@ -12,7 +12,7 @@ services:
       - "443:443"
     network_mode: "host"
   postgres:
-    image: postgres:17.0-alpine3.20
+    image: postgis/postgis:17-3.5
     restart: always
     env_file:
       - ${POSTGRES_ENV_FILE}

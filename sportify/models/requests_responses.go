@@ -11,6 +11,11 @@ import (
 	"github.com/google/uuid"
 )
 
+type ResponseOpenMapCoordinates struct {
+	Latitude  string `json:"lat"`
+	Longitude string `json:"lon"`
+}
+
 type ResponsesPayment struct {
 	PaymentStatus PaymentStatus `json:"payment_status"`
 }

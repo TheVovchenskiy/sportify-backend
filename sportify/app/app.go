@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/TheVovchenskiy/sportify-backend/pkg/mylogger"
+	"net/http"
 	"sync"
 	"time"
 
@@ -25,6 +27,7 @@ type EventStorage interface {
 	GetUsersEvents(ctx context.Context, userID uuid.UUID) ([]models.ShortEvent, error)
 	SubscribeEvent(ctx context.Context, id uuid.UUID, userID uuid.UUID, subscribe bool) (*models.ResponseSubscribeEvent, error)
 	AddUserPaid(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
+	SetCoordinates(ctx context.Context, latitude, longitude string, id uuid.UUID) error
 }
 
 //var _ EventStorage = (*db.SimpleEventStorage)(nil)
@@ -60,22 +63,39 @@ type App struct {
 	eventStorage         EventStorage
 	paymentPayoutStorage PaymentPayoutStorage
 	yookassaClient       YookassaClient
+	httpClient           *http.Client
+	logger               *mylogger.MyLogger
 }
 
 func NewApp(
 	urlPrefixFile string,
 	fileStorage FileStorage,
 	eventStorage EventStorage,
+	logger *mylogger.MyLogger,
 	// paymentPayoutStorage PaymentPayoutStorage,
 	// yookassaClient YookassaClient,
 ) *App {
-	return &App{
+	app := &App{
 		urlPrefixFile: urlPrefixFile,
 		eventStorage:  eventStorage,
 		fileStorage:   fileStorage,
+		httpClient:    http.DefaultClient,
+		logger:        logger,
 		// paymentPayoutStorage: paymentPayoutStorage,
 		// yookassaClient:       yookassaClient,
 	}
+
+	// TODO add context to cancel
+	go func() {
+		defer func() {
+			if pan := recover(); pan != nil {
+				logger.Errorf("panic: %v", pan)
+			}
+		}()
+		app.RefreshCoordinates(context.TODO(), time.Second*30)
+	}()
+
+	return app
 }
 
 var (
