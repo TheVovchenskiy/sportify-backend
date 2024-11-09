@@ -71,11 +71,21 @@ var ErrRequestEventCreateSite = errors.New("некорректный запро�
 func (h *Handler) CreateEventSite(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
+	logger, err := mylogger.Get()
+	if err != nil {
+		h.handleCreateEventSiteError(ctx, w, err)
+		return
+	}
+
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		h.handleCreateEventSiteError(ctx, w, err)
 		return
 	}
+
+	logger.WithCtx(ctx).Infow("Got request", "body", string(body))
+
+	logger.WithCtx(ctx).Info("Got request", string(body))
 
 	var requestEventCreate models.RequestEventCreateSite
 
