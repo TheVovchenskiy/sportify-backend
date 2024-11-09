@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 	"github.com/TheVovchenskiy/sportify-backend/pkg/mylogger"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -146,14 +146,9 @@ func (a *App) CreateEventSite(ctx context.Context, request *models.RequestEventC
 			return nil, fmt.Errorf("to parse chatID: %w", err)
 		}
 
-		userID, err := strconv.ParseInt(request.Tg.UserID, 10, 64)
-		if err != nil {
-			return nil, fmt.Errorf("to parse userID: %w", err)
-		}
-
 		eventCreateRequest := models.EventCreatedBotRequest{
 			TgChatID: &chatID,
-			TgUserID: &userID,
+			TgUserID: &request.Tg.UserID,
 			Event:    result.ShortEvent,
 		}
 
