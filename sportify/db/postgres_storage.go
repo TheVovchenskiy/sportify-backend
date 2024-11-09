@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/TheVovchenskiy/sportify-backend/models"
 	"github.com/TheVovchenskiy/sportify-backend/pkg/mylogger"
