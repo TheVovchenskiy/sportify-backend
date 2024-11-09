@@ -53,8 +53,9 @@ func (p *PostgresStorage) EditEvent(ctx context.Context, event *models.FullEvent
 	UPDATE "public".event SET creator_id = $1, sport_type = $2, address = $3, 
 		date_start = $4, start_time = $5, end_time = $6, price = $7, game_level = $8,
 		description = $9, capacity = $10, creation_type = $11, url_message = $12, 
-		url_author = $13, url_preview = $14, url_photos = $15
-		WHERE id = $16 AND deleted_at IS NULL;`
+		url_author = $13, url_preview = $14, url_photos = $15,
+		coordinates = ST_Point($16, $17, 4326)::geography
+		WHERE id = $18 AND deleted_at IS NULL;`
 
 	preparedGameLevels := pgtype.Array[string]{Elements: models.RawGameLevel(event.GameLevels)}
 
@@ -62,7 +63,7 @@ func (p *PostgresStorage) EditEvent(ctx context.Context, event *models.FullEvent
 		event.CreatorID, event.SportType, event.Address,
 		event.Date, event.StartTime, event.EndTime, event.Price, preparedGameLevels,
 		event.Description, event.Capacity, event.CreationType, event.URLMessage,
-		event.URLAuthor, event.URLPreview, event.URLPhotos, event.ID)
+		event.URLAuthor, event.URLPreview, event.URLPhotos, event.Latitude, event.Longitude, event.ID)
 	if err != nil {
 		return err
 	}
@@ -230,7 +231,7 @@ func getSQLEvents(rawRows pgx.Rows) ([]models.ShortEvent, error) {
 			&curEvent.ID, &curEvent.CreatorID, &curEvent.SportType, &curEvent.Address, &curEvent.Date,
 			&curEvent.StartTime, &curEvent.EndTime, &curEvent.Price, &rawGameLevels,
 			&curEvent.Capacity, &curEvent.Busy, &curEvent.Subscribers,
-			&curEvent.URLPreview, &photoURLs,
+			&curEvent.URLPreview, &photoURLs, &curEvent.Latitude, &curEvent.Longitude,
 		},
 		func() error {
 			result = append(
@@ -250,6 +251,8 @@ func getSQLEvents(rawRows pgx.Rows) ([]models.ShortEvent, error) {
 					Subscribers: curEvent.Subscribers,
 					URLPreview:  curEvent.URLPreview,
 					URLPhotos:   photoURLs.Elements,
+					Latitude:    curEvent.Latitude,
+					Longitude:   curEvent.Longitude,
 				})
 
 			return nil
@@ -269,7 +272,8 @@ func (p *PostgresStorage) GetEvents(ctx context.Context) ([]models.ShortEvent, e
 	sqlSelect := `
 	SELECT id, creator_id, sport_type, address, date_start, start_time,
        end_time, price, game_level, capacity, busy,
-       subscriber_ids, url_preview, url_photos
+       subscriber_ids, url_preview, url_photos,
+       ST_X(coordinates::geometry) as latitude, ST_Y(coordinates::geometry) as longitude
 	FROM "public".event WHERE deleted_at IS NULL AND start_time > NOW() - INTERVAL '1 day'
 	ORDER BY start_time;`
 
@@ -292,11 +296,12 @@ func (p *PostgresStorage) FindEvents(ctx context.Context, filterParams *models.F
 
 	query := squirrel.Select(`id, creator_id, sport_type, address, date_start, start_time,
 		end_time, price, game_level, capacity, busy,
-		subscriber_ids, url_preview, url_photos`).
+		subscriber_ids, url_preview, url_photos,
+		ST_X(coordinates::geometry) as latitude, ST_Y(coordinates::geometry) as longitude`).
 		From(`"public".event`).
 		PlaceholderFormat(squirrel.Dollar).
 		Where(squirrel.Eq{"deleted_at": nil})
-		// Where(squirrel.Gt{"start_time": time.Now().Add(-24 * time.Hour)}) // TODO: add later
+	// Where(squirrel.Gt{"start_time": time.Now().Add(-24 * time.Hour)}) // TODO: add later
 
 	if len(filterParams.SportTypes) > 0 {
 		query = query.Where(squirrel.Eq{"sport_type": filterParams.SportTypes})
@@ -359,6 +364,17 @@ func (p *PostgresStorage) AddUserPaid(ctx context.Context, id uuid.UUID, userID 
 	UPDATE public.event SET user_paid_ids = ARRAY_APPEND(user_paid_ids, $1) WHERE id = $2;`
 
 	_, err := p.pool.Exec(ctx, sqlUpdate, userID, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *PostgresStorage) SetCoordinates(ctx context.Context, latitude, longitude string, id uuid.UUID) error {
+	sqlUpdate := `UPDATE public.event SET coordinates = ST_Point( $1, $2, 4326)::geography WHERE id = $3`
+
+	_, err := p.pool.Exec(ctx, sqlUpdate, latitude, longitude, id)
 	if err != nil {
 		return err
 	}

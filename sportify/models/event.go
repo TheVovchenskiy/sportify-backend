@@ -62,6 +62,8 @@ type ShortEvent struct {
 	Subscribers []uuid.UUID `json:"subscribers_id"`
 	URLPreview  string      `json:"preview"`
 	URLPhotos   []string    `json:"photos"`
+	Latitude    *string     `json:"latitude"`
+	Longitude   *string     `json:"longitude"`
 }
 
 func IsFreePrice(price *int) bool {

@@ -20,6 +20,10 @@ create-migration:
 migration-up:
 	docker exec -it sportify-backend-backend_sportify-1 ./migrate -database postgres://postgres:postgres@postgres:5432/sportify?sslmode=disable -path ./migrations up
 
+.PHONY: migration-down
+migration-up:
+	docker exec -it sportify-backend-backend_sportify-1 ./migrate -database postgres://postgres:postgres@postgres:5432/sportify?sslmode=disable -path ./migrations down
+
 .PHONY: migration-up-reserve
 migration-up-reserve:
 	docker exec -it sportify-backend-backend_sportify-1 ./migrate -database postgres://postgres:postgres@localhost:5432/sportify?sslmode=disable -path ./migrations up
