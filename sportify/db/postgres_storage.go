@@ -296,8 +296,8 @@ func (p *PostgresStorage) FindEvents(ctx context.Context, filterParams *models.F
 		subscriber_ids, url_preview, url_photos`).
 		From(`"public".event`).
 		PlaceholderFormat(squirrel.Dollar).
-		Where(squirrel.Eq{"deleted_at": nil}).
-		Where(squirrel.Gt{"start_time": time.Now().Add(-24 * time.Hour)})
+		Where(squirrel.Eq{"deleted_at": nil})
+		// Where(squirrel.Gt{"start_time": time.Now().Add(-24 * time.Hour)}) // TODO: add later
 
 	if len(filterParams.SportTypes) > 0 {
 		query = query.Where(squirrel.Eq{"sport_type": filterParams.SportTypes})
