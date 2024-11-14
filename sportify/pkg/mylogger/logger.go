@@ -46,6 +46,7 @@ func New(
 			config = zap.NewDevelopmentConfig()
 		}
 
+		config.DisableStacktrace = true
 		config.OutputPaths = outputPaths
 		config.ErrorOutputPaths = errorOutputPaths
 

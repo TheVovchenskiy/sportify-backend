@@ -18,6 +18,7 @@ import (
 	"github.com/TheVovchenskiy/sportify-backend/pkg/common"
 	"github.com/TheVovchenskiy/sportify-backend/pkg/mylogger"
 
+	"github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
 )
 
@@ -29,7 +30,6 @@ type App interface {
 	GetEvents(ctx context.Context) ([]models.ShortEvent, error)
 	FindEvents(ctx context.Context, filterParams *models.FilterParams) ([]models.ShortEvent, error)
 	GetEvent(ctx context.Context, id uuid.UUID) (*models.FullEvent, error)
-	GetUsersEvents(ctx context.Context, userID uuid.UUID) ([]models.ShortEvent, error)
 	SubscribeEvent(
 		ctx context.Context,
 		id uuid.UUID,
@@ -106,16 +106,124 @@ func (h *Handler) CreateEventSite(w http.ResponseWriter, r *http.Request) {
 	models.WriteJSONResponse(w, fullEvent)
 }
 
-func (h *Handler) GetUsersEvent(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) handleGetUsersEvents(ctx context.Context, w http.ResponseWriter, errOutside error) {
+	h.logger.WithCtx(ctx).Error(errOutside)
+
+	switch {
+	case errors.Is(errOutside, ErrRequestFilterParams):
+		models.WriteResponseError(w, models.NewResponseBadRequestErr("", errOutside.Error()))
+	case errors.Is(errOutside, api.ErrInvalidUUID):
+		models.WriteResponseError(w, models.NewResponseBadRequestErr("", errOutside.Error()))
+	default:
+		models.WriteResponseError(w, models.NewResponseInternalServerErr("", models.InternalServerErrMessage))
+	}
+}
+
+var ErrRequestFilterParams = errors.New("некорректные фильтры в запросе")
+
+func (h *Handler) GetUsersEvents(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	userID, err := api.GetUUID(r, "id")
 	if err != nil {
-		h.handleSubscribeEventError(ctx, w, err)
+		h.handleGetUsersEvents(ctx, w, err)
 		return
 	}
 
-	events, err := h.app.GetUsersEvents(ctx, userID)
+	filterParams, err := models.ParseFilterParams(r.URL.Query())
+	if err != nil {
+		err = fmt.Errorf("%w: %w", ErrRequestFilterParams, err)
+		h.handleGetUsersEvents(ctx, w, err)
+		return
+	}
+
+	filterParams.CreatorID = common.Ref(userID)
+
+	events, err := h.app.FindEvents(ctx, filterParams)
+	h.logger.WithCtx(ctx).Info("Got events", events)
+	if err != nil {
+		h.handleGetEventsError(ctx, w, err)
+		return
+	}
+
+	models.WriteJSONResponse(w, events)
+}
+
+func (h *Handler) handleGetUsersSubActiveEvents(ctx context.Context, w http.ResponseWriter, errOutside error) {
+	h.logger.WithCtx(ctx).Error(errOutside)
+
+	switch {
+	case errors.Is(errOutside, ErrRequestFilterParams):
+		models.WriteResponseError(w, models.NewResponseBadRequestErr("", errOutside.Error()))
+	case errors.Is(errOutside, api.ErrInvalidUUID):
+		models.WriteResponseError(w, models.NewResponseBadRequestErr("", errOutside.Error()))
+	default:
+		models.WriteResponseError(w, models.NewResponseInternalServerErr("", models.InternalServerErrMessage))
+	}
+}
+
+func (h *Handler) GetUsersSubActiveEvents(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	userID, err := api.GetUUID(r, "id")
+	if err != nil {
+		h.handleGetUsersSubActiveEvents(ctx, w, err)
+		return
+	}
+
+	filterParams, err := models.ParseFilterParams(r.URL.Query())
+	if err != nil {
+		err = fmt.Errorf("%w: %w", ErrRequestFilterParams, err)
+		h.handleGetUsersSubActiveEvents(ctx, w, err)
+		return
+	}
+
+	filterParams.SubscriberIDs = []uuid.UUID{userID}
+	filterParams.DateExpression = squirrel.GtOrEq{"start_time": time.Now().Add(-1 * time.Hour * 24)}
+
+	events, err := h.app.FindEvents(ctx, filterParams)
+	h.logger.WithCtx(ctx).Info("Got events", events)
+	if err != nil {
+		h.handleGetEventsError(ctx, w, err)
+		return
+	}
+
+	models.WriteJSONResponse(w, events)
+}
+
+func (h *Handler) handleGetUsersSubArchiveEvents(ctx context.Context, w http.ResponseWriter, errOutside error) {
+	h.logger.WithCtx(ctx).Error(errOutside)
+
+	switch {
+	case errors.Is(errOutside, ErrRequestFilterParams):
+		models.WriteResponseError(w, models.NewResponseBadRequestErr("", errOutside.Error()))
+	case errors.Is(errOutside, api.ErrInvalidUUID):
+		models.WriteResponseError(w, models.NewResponseBadRequestErr("", errOutside.Error()))
+	default:
+		models.WriteResponseError(w, models.NewResponseInternalServerErr("", models.InternalServerErrMessage))
+	}
+}
+
+func (h *Handler) GetUsersSubArchiveEvents(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	userID, err := api.GetUUID(r, "id")
+	if err != nil {
+		h.handleGetUsersSubActiveEvents(ctx, w, err)
+		return
+	}
+
+	filterParams, err := models.ParseFilterParams(r.URL.Query())
+	if err != nil {
+		err = fmt.Errorf("%w: %w", ErrRequestFilterParams, err)
+		h.handleGetUsersSubActiveEvents(ctx, w, err)
+		return
+	}
+
+	filterParams.SubscriberIDs = []uuid.UUID{userID}
+	filterParams.DateExpression = squirrel.LtOrEq{"start_time": time.Now().Add(-1 * time.Hour * 24)}
+
+	events, err := h.app.FindEvents(ctx, filterParams)
 	h.logger.WithCtx(ctx).Info("Got events", events)
 	if err != nil {
 		h.handleGetEventsError(ctx, w, err)
@@ -246,7 +354,16 @@ func (h *Handler) GetEvents(w http.ResponseWriter, r *http.Request) {
 	models.WriteJSONResponse(w, events)
 }
 
-var ErrInvalidQueryParams = errors.New("не верные параметры запроса")
+func (h *Handler) handleFindEvents(ctx context.Context, w http.ResponseWriter, errOutside error) {
+	h.logger.WithCtx(ctx).Error(errOutside)
+
+	switch {
+	case errors.Is(errOutside, ErrRequestFilterParams):
+		models.WriteResponseError(w, models.NewResponseBadRequestErr("", errOutside.Error()))
+	default:
+		models.WriteResponseError(w, models.NewResponseInternalServerErr("", models.InternalServerErrMessage))
+	}
+}
 
 func (h *Handler) FindEvents(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -255,13 +372,13 @@ func (h *Handler) FindEvents(w http.ResponseWriter, r *http.Request) {
 
 	filterParams, err := models.ParseFilterParams(q)
 	if err != nil {
-		h.handleGetEventsError(ctx, w, fmt.Errorf("%w: %w", ErrInvalidQueryParams, err))
+		h.handleFindEvents(ctx, w, fmt.Errorf("%w: %w", ErrRequestFilterParams, err))
 		return
 	}
 
 	events, err := h.app.FindEvents(ctx, filterParams)
 	if err != nil {
-		h.handleGetEventsError(ctx, w, err)
+		h.handleFindEvents(ctx, w, err)
 		return
 	}
 

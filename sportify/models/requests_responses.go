@@ -80,7 +80,7 @@ func WriteJSONResponse(w http.ResponseWriter, response any) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Header().Add("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json")
 	w.Write(body)
 }
 

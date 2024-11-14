@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/TheVovchenskiy/sportify-backend/pkg/mylogger"
 	"net/http"
 	"strconv"
 	"sync"
@@ -14,6 +13,7 @@ import (
 	"github.com/TheVovchenskiy/sportify-backend/app/yookassa"
 	"github.com/TheVovchenskiy/sportify-backend/db"
 	"github.com/TheVovchenskiy/sportify-backend/models"
+	"github.com/TheVovchenskiy/sportify-backend/pkg/mylogger"
 
 	"github.com/google/uuid"
 )
@@ -26,7 +26,6 @@ type EventStorage interface {
 	GetCreatorID(ctx context.Context, eventID uuid.UUID) (uuid.UUID, error)
 	FindEvents(ctx context.Context, filterParams *models.FilterParams) ([]models.ShortEvent, error)
 	GetEvent(ctx context.Context, id uuid.UUID) (*models.FullEvent, error)
-	GetUsersEvents(ctx context.Context, userID uuid.UUID) ([]models.ShortEvent, error)
 	SubscribeEvent(ctx context.Context, id uuid.UUID, userID uuid.UUID, subscribe bool) (*models.ResponseSubscribeEvent, error)
 	AddUserPaid(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
 	SetCoordinates(ctx context.Context, latitude, longitude string, id uuid.UUID) error
@@ -221,10 +220,6 @@ func (a *App) FindEvents(ctx context.Context, filterParams *models.FilterParams)
 
 func (a *App) GetEvent(ctx context.Context, id uuid.UUID) (*models.FullEvent, error) {
 	return a.eventStorage.GetEvent(ctx, id)
-}
-
-func (a *App) GetUsersEvents(ctx context.Context, userID uuid.UUID) ([]models.ShortEvent, error) {
-	return a.eventStorage.GetUsersEvents(ctx, userID)
 }
 
 func (a *App) SubscribeEvent(ctx context.Context, id uuid.UUID, userID uuid.UUID, subscribe bool) (*models.ResponseSubscribeEvent, error) {

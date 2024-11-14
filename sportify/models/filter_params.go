@@ -3,24 +3,46 @@ package models
 import (
 	"net/url"
 	"strconv"
+
+	"github.com/TheVovchenskiy/sportify-backend/pkg/common"
+
+	"github.com/google/uuid"
 )
 
 type FilterParams struct {
-	SportTypes []string
-	GameLevels []string
+	// Block public usage (from query params)
+
+	SportTypes []SportType
+	GameLevels []GameLevel
 	DateStarts []string
 	PriceMin   *int
 	PriceMax   *int
 	FreePlaces *int
 	OrderBy    string
 	SortOrder  string
+
+	// Block inner usage
+
+	CreatorID     *uuid.UUID
+	SubscriberIDs []uuid.UUID
+
+	// DateExpression is representation of WHERE statement
+	// you can use squirrel.Eq and another with similar sense
+	DateExpression any
 }
 
 //nolint:cyclop
 func ParseFilterParams(query url.Values) (*FilterParams, error) {
 	params := &FilterParams{ //nolint:exhaustruct
-		SportTypes: query["sport_type"],
-		GameLevels: query["game_level"],
+		SportTypes: common.Map[string, SportType](
+			func(s string) SportType {
+				return SportType(s)
+			},
+			query["sport_type"]),
+		GameLevels: common.Map[string, GameLevel](
+			func(s string) GameLevel {
+				return GameLevel(s)
+			}, query["game_level"]),
 		DateStarts: query["date_start"],
 		OrderBy:    query.Get("order_by"),
 		SortOrder:  query.Get("sort_order"),
@@ -51,7 +73,7 @@ func ParseFilterParams(query url.Values) (*FilterParams, error) {
 	}
 
 	if params.OrderBy == "" {
-		params.OrderBy = "date_start"
+		params.OrderBy = "start_time"
 	}
 
 	if params.SortOrder == "" || (params.SortOrder != "asc" && params.SortOrder != "desc") {

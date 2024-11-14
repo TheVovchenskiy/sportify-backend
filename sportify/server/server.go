@@ -106,7 +106,9 @@ func (s *Server) Run(ctx context.Context, configFile []string) error {
 		r.Delete("/event/{id}", handler.DeleteEvent)
 		r.Put("/event/sub/{id}", handler.SubscribeEvent)
 		r.Post("/event", handler.CreateEventSite)
-		r.Get("/users/{id}/events", handler.GetUsersEvent)
+		r.Get("/users/{id}/events", handler.GetUsersEvents)
+		r.Get("/users/{id}/sub_active/events", handler.GetUsersSubActiveEvents)
+		r.Get("/users/{id}/sub_archive/events", handler.GetUsersSubArchiveEvents)
 		r.Post("/upload", handler.UploadFile)
 
 		r.Get("/img/*", func(w http.ResponseWriter, r *http.Request) {

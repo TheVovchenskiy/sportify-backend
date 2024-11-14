@@ -7,7 +7,6 @@ import (
 
 	"github.com/TheVovchenskiy/sportify-backend/models"
 	"github.com/TheVovchenskiy/sportify-backend/pkg/mylogger"
-	"go.uber.org/zap"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/go-park-mail-ru/2023_2_Rabotyagi/pkg/repository"
@@ -16,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/lib/pq"
+	"go.uber.org/zap"
 )
 
 type PostgresStorage struct {
@@ -303,6 +303,10 @@ func (p *PostgresStorage) FindEvents(ctx context.Context, filterParams *models.F
 		Where(squirrel.Eq{"deleted_at": nil})
 	// Where(squirrel.Gt{"start_time": time.Now().Add(-24 * time.Hour)}) // TODO: add later
 
+	if filterParams.CreatorID != nil {
+		query = query.Where(squirrel.Eq{"creator_id": filterParams.CreatorID})
+	}
+
 	if len(filterParams.SportTypes) > 0 {
 		query = query.Where(squirrel.Eq{"sport_type": filterParams.SportTypes})
 	}
@@ -310,8 +314,17 @@ func (p *PostgresStorage) FindEvents(ctx context.Context, filterParams *models.F
 	if len(filterParams.GameLevels) > 0 {
 		query = query.Where("game_level && ?", pq.Array(filterParams.GameLevels))
 	}
+
 	if len(filterParams.DateStarts) > 0 {
 		query = query.Where(squirrel.Eq{"date_start": filterParams.DateStarts})
+	}
+
+	if filterParams.DateExpression != nil {
+		query = query.Where(filterParams.DateExpression)
+	}
+
+	if len(filterParams.SubscriberIDs) > 0 {
+		query = query.Where("subscriber_ids && ?", pq.Array(filterParams.SubscriberIDs))
 	}
 
 	if filterParams.PriceMin != nil {
@@ -336,22 +349,6 @@ func (p *PostgresStorage) FindEvents(ctx context.Context, filterParams *models.F
 	logger.WithCtx(ctx).Infow("SQL query", zap.String("query", sql), zap.Any("args", args))
 
 	rawRows, err := p.pool.Query(ctx, sql, args...)
-	if err != nil {
-		return nil, fmt.Errorf("select events: %w", err)
-	}
-
-	return getSQLEvents(rawRows)
-}
-
-func (p *PostgresStorage) GetUsersEvents(ctx context.Context, userID uuid.UUID) ([]models.ShortEvent, error) {
-	sqlSelect := `
-	SELECT id, creator_id, sport_type, address, date_start, start_time,
-       end_time, price, game_level, capacity, busy,
-       subscriber_ids, url_preview, url_photos
-	FROM "public".event WHERE deleted_at IS NULL AND creator_id = $1
-	ORDER BY start_time;`
-
-	rawRows, err := p.pool.Query(ctx, sqlSelect, userID)
 	if err != nil {
 		return nil, fmt.Errorf("select events: %w", err)
 	}

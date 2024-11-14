@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/TheVovchenskiy/sportify-backend/models"
 	"io"
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/TheVovchenskiy/sportify-backend/models"
 )
 
 func requestURLOpenMap() string {

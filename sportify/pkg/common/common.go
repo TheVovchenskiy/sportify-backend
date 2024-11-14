@@ -13,3 +13,11 @@ func Find[T any](collection []T, predicate func(item T) bool) (T, bool) {
 
 	return *new(T), false
 }
+
+func Map[T any, V any](mapping func(T) V, elements []T) []V {
+	result := make([]V, 0, len(elements))
+	for _, arg := range elements {
+		result = append(result, mapping(arg))
+	}
+	return result
+}
