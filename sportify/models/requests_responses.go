@@ -3,10 +3,12 @@ package models
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/TheVovchenskiy/sportify-backend/pkg/common"
+	"github.com/TheVovchenskiy/sportify-backend/pkg/mylogger"
 
 	"github.com/google/uuid"
 )
@@ -72,16 +74,30 @@ type RequestSubscribeEvent struct {
 }
 
 func WriteJSONResponse(w http.ResponseWriter, response any) {
+	logger, err := mylogger.Get()
+	if err != nil {
+		fmt.Println(err)
+		logger = mylogger.NewNop()
+	}
+
 	body, err := json.Marshal(response)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(InternalServerErrMessage))
+		_, err = w.Write([]byte(InternalServerErrMessage))
+		if err != nil {
+			logger.Error("error write resp InternalServerErrMessage")
+			w.WriteHeader(http.StatusInternalServerError)
+		}
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(body)
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write(body)
+	if err != nil {
+		logger.Error("error write resp body")
+		w.WriteHeader(http.StatusInternalServerError)
+	}
 }
 
 type ResponseEventDelete struct {
