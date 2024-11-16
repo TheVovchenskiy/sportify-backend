@@ -141,14 +141,14 @@ func (a *App) CreateEventSite(ctx context.Context, request *models.RequestEventC
 	}
 
 	if request.Tg != nil {
-		chatID, err := strconv.ParseInt(request.Tg.ChatID, 10, 64)
+		chatID, err := strconv.ParseInt(*request.Tg.ChatID, 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf("to parse chatID: %w", err)
 		}
 
 		eventCreateRequest := models.EventCreatedBotRequest{
 			TgChatID: &chatID,
-			TgUserID: &request.Tg.UserID,
+			TgUserID: request.Tg.UserID,
 			Event:    result.ShortEvent,
 		}
 

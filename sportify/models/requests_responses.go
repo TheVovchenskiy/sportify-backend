@@ -66,8 +66,8 @@ type EventCreateSite struct {
 }
 
 type TgParams struct {
-	UserID int64  `json:"user_id"`
-	ChatID string `json:"chat_id"`
+	UserID *int64  `json:"user_id"`
+	ChatID *string `json:"chat_id"`
 }
 
 type RequestEventCreateSite struct {

@@ -85,8 +85,6 @@ func (h *Handler) CreateEventSite(w http.ResponseWriter, r *http.Request) {
 
 	logger.WithCtx(ctx).Infow("Got request", "body", string(body))
 
-	logger.WithCtx(ctx).Info("Got request", string(body))
-
 	var requestEventCreate models.RequestEventCreateSite
 
 	err = json.Unmarshal(body, &requestEventCreate)
@@ -95,6 +93,10 @@ func (h *Handler) CreateEventSite(w http.ResponseWriter, r *http.Request) {
 
 		h.handleCreateEventSiteError(ctx, w, errOutside)
 		return
+	}
+
+	if requestEventCreate.Tg != nil && (requestEventCreate.Tg.ChatID == nil || requestEventCreate.Tg.UserID == nil) {
+		requestEventCreate.Tg = nil
 	}
 
 	fullEvent, err := h.app.CreateEventSite(ctx, &requestEventCreate)
