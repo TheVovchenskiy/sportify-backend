@@ -4,11 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
-	"time"
-
 	"github.com/TheVovchenskiy/sportify-backend/pkg/common"
 	"github.com/TheVovchenskiy/sportify-backend/pkg/mylogger"
+	"net/http"
 
 	"github.com/google/uuid"
 )
@@ -38,17 +36,27 @@ type RequestEventDelete struct {
 }
 
 type RequestEventEditSite struct {
-	EventID       uuid.UUID       `json:"-"`
-	UserID        uuid.UUID       `json:"user_id"`
-	EventEditSite EventCreateSite `json:"event_edit"`
+	EventID       uuid.UUID     `json:"-"`
+	UserID        uuid.UUID     `json:"user_id"`
+	EventEditSite EventEditSite `json:"event_edit"`
+}
+
+type EventEditSite struct {
+	SportType   *SportType   `json:"sport_type"`
+	Address     *string      `json:"address"`
+	DateAndTime *DateAndTime `json:"date_time"`
+	Price       *int         `json:"price"`
+	GameLevels  []GameLevel  `json:"game_level"`
+	Description *string      `json:"description"`
+	Capacity    *int         `json:"capacity"`
+	URLPreview  *string      `json:"preview"`
+	URLPhotos   []string     `json:"photos"`
 }
 
 type EventCreateSite struct {
 	SportType   SportType   `json:"sport_type"`
 	Address     string      `json:"address"`
-	Date        time.Time   `json:"date"`
-	StartTime   time.Time   `json:"start_time"`
-	EndTime     *time.Time  `json:"end_time"`
+	DateAndTime DateAndTime `json:"date_time"`
 	Price       *int        `json:"price"`
 	GameLevels  []GameLevel `json:"game_level"`
 	Description *string     `json:"description"`

@@ -61,7 +61,7 @@ func (a *App) getCoordinatesByAddress(ctx context.Context, address string) (stri
 }
 
 func (a *App) RefreshCoordinates(ctx context.Context, period time.Duration) {
-	ticker := time.NewTicker(time.Second * 10)
+	ticker := time.NewTicker(time.Second * 60)
 	for {
 		select {
 		case <-ctx.Done():

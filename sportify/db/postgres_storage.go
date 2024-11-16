@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
 	"github.com/TheVovchenskiy/sportify-backend/models"
 	"github.com/TheVovchenskiy/sportify-backend/pkg/mylogger"
 
@@ -38,7 +37,7 @@ func (p *PostgresStorage) CreateEvent(ctx context.Context, event *models.FullEve
 
 	_, err := p.pool.Exec(ctx, sqlInsertEvent,
 		event.ID, event.CreatorID, event.Subscribers, event.SportType, event.Address,
-		event.Date, event.StartTime, event.EndTime, event.Price, preparedGameLevel,
+		event.DateAndTime.Date, event.DateAndTime.StartTime, event.DateAndTime.EndTime, event.Price, preparedGameLevel,
 		event.Description, event.RawMessage, event.Capacity, event.Busy, event.CreationType,
 		event.URLMessage, event.URLAuthor, event.URLPreview, event.URLPhotos)
 	if err != nil {
@@ -61,7 +60,7 @@ func (p *PostgresStorage) EditEvent(ctx context.Context, event *models.FullEvent
 
 	_, err := p.pool.Exec(ctx, sqlUpdateEvent,
 		event.CreatorID, event.SportType, event.Address,
-		event.Date, event.StartTime, event.EndTime, event.Price, preparedGameLevels,
+		event.DateAndTime.Date, event.DateAndTime.StartTime, event.DateAndTime.EndTime, event.Price, preparedGameLevels,
 		event.Description, event.Capacity, event.CreationType, event.URLMessage,
 		event.URLAuthor, event.URLPreview, event.URLPhotos, event.Latitude, event.Longitude, event.ID)
 	if err != nil {
@@ -121,7 +120,7 @@ func (p *PostgresStorage) GetEvent(ctx context.Context, eventID uuid.UUID) (*mod
 	)
 
 	err := rawRow.Scan(&event.CreatorID, &rawSubscriberIDs, &event.SportType, &event.Address,
-		&event.Date, &event.StartTime, &event.EndTime, &event.Price, &rawGameLevels,
+		&event.DateAndTime.Date, &event.DateAndTime.StartTime, &event.DateAndTime.EndTime, &event.Price, &rawGameLevels,
 		&event.Description, &event.RawMessage, &event.Capacity, &event.Busy, &event.CreationType,
 		&event.URLAuthor, &event.URLMessage, &event.URLPreview, &rawURLPhotos)
 	if err != nil {
@@ -228,21 +227,23 @@ func getSQLEvents(rawRows pgx.Rows) ([]models.ShortEvent, error) {
 	_, err := pgx.ForEachRow(
 		rawRows,
 		[]any{
-			&curEvent.ID, &curEvent.CreatorID, &curEvent.SportType, &curEvent.Address, &curEvent.Date,
-			&curEvent.StartTime, &curEvent.EndTime, &curEvent.Price, &rawGameLevels,
+			&curEvent.ID, &curEvent.CreatorID, &curEvent.SportType, &curEvent.Address, &curEvent.DateAndTime.Date,
+			&curEvent.DateAndTime.StartTime, &curEvent.DateAndTime.EndTime, &curEvent.Price, &rawGameLevels,
 			&curEvent.Capacity, &curEvent.Busy, &curEvent.Subscribers,
 			&curEvent.URLPreview, &photoURLs, &curEvent.Latitude, &curEvent.Longitude,
 		},
 		func() error {
 			result = append(
 				result, models.ShortEvent{
-					ID:          curEvent.ID,
-					CreatorID:   curEvent.CreatorID,
-					SportType:   curEvent.SportType,
-					Address:     curEvent.Address,
-					Date:        curEvent.Date,
-					StartTime:   curEvent.StartTime,
-					EndTime:     curEvent.EndTime,
+					ID:        curEvent.ID,
+					CreatorID: curEvent.CreatorID,
+					SportType: curEvent.SportType,
+					Address:   curEvent.Address,
+					DateAndTime: models.DateAndTime{
+						Date:      curEvent.DateAndTime.Date,
+						StartTime: curEvent.DateAndTime.StartTime,
+						EndTime:   curEvent.DateAndTime.EndTime,
+					},
 					Price:       curEvent.Price,
 					IsFree:      *curEvent.Price == 0,
 					GameLevels:  models.GameLevelFromRawNullable(rawGameLevels.Elements),

@@ -517,14 +517,14 @@ func eventFromYaGPT(text []byte) (*models.FullEvent, error) {
 		return nil, err
 	}
 
-	result.Date = time.Date(2024, date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
+	result.DateAndTime.Date = time.Date(2024, date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
 
 	startTime, err := time.Parse("15:04", eventYa.StartTime)
 	if err != nil {
 		return nil, err
 	}
 
-	result.StartTime = time.Date(2024, date.Month(), date.Day(), startTime.Hour(), startTime.Minute(), 0, 0, time.UTC)
+	result.DateAndTime.StartTime = time.Date(2024, date.Month(), date.Day(), startTime.Hour(), startTime.Minute(), 0, 0, time.UTC)
 
 	if eventYa.EndTime == "" {
 		endTime, err := time.Parse("15:04", eventYa.EndTime)
@@ -532,7 +532,7 @@ func eventFromYaGPT(text []byte) (*models.FullEvent, error) {
 			return nil, err
 		}
 
-		result.EndTime = common.Ref(time.Date(2024, date.Month(), date.Day(), endTime.Hour(), endTime.Minute(), 0, 0, time.UTC))
+		result.DateAndTime.EndTime = common.Ref(time.Date(2024, date.Month(), date.Day(), endTime.Hour(), endTime.Minute(), 0, 0, time.UTC))
 	}
 
 	result.Address = eventYa.Location

@@ -1,8 +1,6 @@
 package models
 
 import (
-	"time"
-
 	"github.com/google/uuid"
 )
 
@@ -15,23 +13,25 @@ const (
 
 type FullEvent struct {
 	ShortEvent
-	URLAuthor    *string
-	URLMessage   *string
-	CreationType CreationType
-	Description  *string `json:"description"`
-	RawMessage   *string `json:"raw_message"`
+	URLAuthor    *string      `json:"url_author"`
+	URLMessage   *string      `json:"url_message"`
+	CreationType CreationType `json:"creation_type"`
+	Description  *string      `json:"description"`
+	RawMessage   *string      `json:"raw_message"`
 }
 
 func NewFullEventSite(eventID uuid.UUID, userID uuid.UUID, eventCreteSite *EventCreateSite) *FullEvent {
 	return &FullEvent{ //nolint:exhaustruct
 		ShortEvent: ShortEvent{
-			ID:          eventID,
-			CreatorID:   userID,
-			SportType:   eventCreteSite.SportType,
-			Address:     eventCreteSite.Address,
-			Date:        eventCreteSite.Date,
-			StartTime:   eventCreteSite.StartTime,
-			EndTime:     eventCreteSite.EndTime,
+			ID:        eventID,
+			CreatorID: userID,
+			SportType: eventCreteSite.SportType,
+			Address:   eventCreteSite.Address,
+			DateAndTime: DateAndTime{
+				Date:      eventCreteSite.DateAndTime.Date,
+				StartTime: eventCreteSite.DateAndTime.StartTime,
+				EndTime:   eventCreteSite.DateAndTime.EndTime,
+			},
 			Price:       eventCreteSite.Price,
 			IsFree:      IsFreePrice(eventCreteSite.Price),
 			GameLevels:  eventCreteSite.GameLevels,
@@ -51,9 +51,7 @@ type ShortEvent struct {
 	CreatorID   uuid.UUID   `json:"creator_id"`
 	SportType   SportType   `json:"sport_type"`
 	Address     string      `json:"address"`
-	Date        time.Time   `json:"date"`
-	StartTime   time.Time   `json:"start_time"`
-	EndTime     *time.Time  `json:"end_time"`
+	DateAndTime DateAndTime `json:"date_time"`
 	Price       *int        `json:"price"`
 	IsFree      bool        `json:"is_free"`
 	GameLevels  []GameLevel `json:"game_level"`

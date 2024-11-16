@@ -18,7 +18,7 @@ const formatHashtag = "#%s"
 func GenerateHashtags(event *models.ShortEvent, sep string) string {
 	var hashtags []string
 
-	hashtags = append(hashtags, event.Date.Format("#дата_02_01_2006"))
+	hashtags = append(hashtags, event.DateAndTime.Date.Format("#дата_02_01_2006"))
 
 	if sportType, ok := models.EnToRuSportType(event.SportType); ok {
 		hashtags = append(hashtags, fmt.Sprintf(formatHashtag, replaceDashAndSpaceToUnderscore(sportType)))

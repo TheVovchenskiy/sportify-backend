@@ -21,3 +21,10 @@ func Map[T any, V any](mapping func(T) V, elements []T) []V {
 	}
 	return result
 }
+
+func NewValWithFallback[T any](newVal, fallbackVal *T) T {
+	if newVal != nil {
+		return *newVal
+	}
+	return *fallbackVal
+}

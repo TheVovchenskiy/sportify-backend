@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/TheVovchenskiy/sportify-backend/pkg/common"
 	"net/http"
 	"strconv"
 	"sync"
@@ -102,7 +103,7 @@ func NewApp(
 				logger.Errorf("panic: %v", pan)
 			}
 		}()
-		app.RefreshCoordinates(context.TODO(), time.Second*30)
+		app.RefreshCoordinates(context.TODO(), time.Second*60)
 	}()
 
 	return app
@@ -164,15 +165,37 @@ func (a *App) CreateEventSite(ctx context.Context, request *models.RequestEventC
 var ErrForbiddenEditNotYourEvent = errors.New("вы не можете изменять не свое событие")
 
 func (a *App) EditEventSite(ctx context.Context, request *models.RequestEventEditSite) (*models.FullEvent, error) {
-	preResult := models.NewFullEventSite(request.EventID, request.UserID, &request.EventEditSite)
-
-	eventFromDB, err := a.eventStorage.GetEvent(ctx, preResult.ID)
+	eventFromDB, err := a.eventStorage.GetEvent(ctx, request.EventID)
 	if err != nil {
 		return nil, fmt.Errorf("to get event: %w", err)
 	}
 
-	if eventFromDB.CreatorID != preResult.CreatorID {
+	if eventFromDB.CreatorID != request.UserID {
 		return nil, ErrForbiddenEditNotYourEvent
+	}
+
+	if len(request.EventEditSite.GameLevels) == 0 {
+		request.EventEditSite.GameLevels = eventFromDB.GameLevels
+	}
+
+	if len(request.EventEditSite.URLPhotos) == 0 {
+		request.EventEditSite.URLPhotos = eventFromDB.URLPhotos
+	}
+
+	preResult := &models.FullEvent{
+		ShortEvent: models.ShortEvent{
+			ID:          request.EventID,
+			CreatorID:   eventFromDB.CreatorID,
+			SportType:   common.NewValWithFallback(request.EventEditSite.SportType, &eventFromDB.SportType),
+			Address:     common.NewValWithFallback(request.EventEditSite.Address, &eventFromDB.Address),
+			DateAndTime: common.NewValWithFallback(request.EventEditSite.DateAndTime, &eventFromDB.DateAndTime),
+			Price:       common.Ref(common.NewValWithFallback(request.EventEditSite.Price, eventFromDB.Price)),
+			GameLevels:  request.EventEditSite.GameLevels,
+			Capacity:    common.Ref(common.NewValWithFallback(request.EventEditSite.Capacity, eventFromDB.Capacity)),
+			URLPreview:  common.NewValWithFallback(request.EventEditSite.URLPreview, &eventFromDB.URLPreview),
+			URLPhotos:   request.EventEditSite.URLPhotos,
+		},
+		CreationType: eventFromDB.CreationType,
 	}
 
 	err = a.eventStorage.EditEvent(ctx, preResult)
