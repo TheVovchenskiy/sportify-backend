@@ -53,4 +53,4 @@ docker-compose-logs:
 
 .PHONY: gen-cert
 gen-cert:
-	openssl req -x509 -sha256 -nodes -subj "/C=RU/ST=Moscow/L=Moscow/O=Sportify/CN=localhost" -newkey rsa:2048 -days 365 -keyout config/localhost.key -out config/localhost.crt
+	openssl req -x509 -sha256 -nodes -subj "/C=RU/ST=Moscow/L=Moscow/O=Sportify/CN=move-life" -newkey rsa:2048 -days 365 -keyout config/move-life.key -out config/move-life.crt
