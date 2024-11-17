@@ -31,7 +31,7 @@ func (a *App) SaveImage(ctx context.Context, file []byte) (string, error) {
 
 	_, format, err := image.Decode(bytes.NewReader(file))
 	if err != nil {
-		return "", fmt.Errorf("to decode(format %s): %w", format, err)
+		return "", fmt.Errorf("to decode(format %s): %w %w", format, err, ErrWrongFormat)
 		//return "", fmt.Errorf("вы используете формат %s %w", format, ErrWrongFormat)
 	}
 

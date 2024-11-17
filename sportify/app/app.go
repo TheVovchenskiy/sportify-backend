@@ -189,12 +189,13 @@ func (a *App) EditEventSite(ctx context.Context, request *models.RequestEventEdi
 			SportType:   common.NewValWithFallback(request.EventEditSite.SportType, &eventFromDB.SportType),
 			Address:     common.NewValWithFallback(request.EventEditSite.Address, &eventFromDB.Address),
 			DateAndTime: common.NewValWithFallback(request.EventEditSite.DateAndTime, &eventFromDB.DateAndTime),
-			Price:       common.Ref(common.NewValWithFallback(request.EventEditSite.Price, eventFromDB.Price)),
+			Price:       request.EventEditSite.Price,
 			GameLevels:  request.EventEditSite.GameLevels,
-			Capacity:    common.Ref(common.NewValWithFallback(request.EventEditSite.Capacity, eventFromDB.Capacity)),
+			Capacity:    request.EventEditSite.Capacity,
 			URLPreview:  common.NewValWithFallback(request.EventEditSite.URLPreview, &eventFromDB.URLPreview),
 			URLPhotos:   request.EventEditSite.URLPhotos,
 		},
+		Description:  request.EventEditSite.Description,
 		CreationType: eventFromDB.CreationType,
 	}
 

@@ -25,7 +25,7 @@ func (h *Handler) handleUploadFileError(ctx context.Context, w http.ResponseWrit
 	case errors.Is(errOutside, ErrToBigFile):
 		models.WriteResponseError(w, models.NewResponseBadRequestErr("", ErrToBigFile.Error()))
 	case errors.Is(errOutside, app.ErrWrongFormat):
-		models.WriteResponseError(w, models.NewResponseBadRequestErr("", errOutside.Error()))
+		models.WriteResponseError(w, models.NewResponseBadRequestErr("", app.ErrWrongFormat.Error()))
 	default:
 		models.WriteResponseError(w, models.NewResponseInternalServerErr("", models.InternalServerErrMessage))
 	}

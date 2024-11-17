@@ -33,7 +33,7 @@ func (p *PostgresStorage) CreateEvent(ctx context.Context, event *models.FullEve
           $9, $10, $11, $12, $13, $14, $15,
           $16, $17, $18, $19);`
 
-	preparedGameLevel := pgtype.Array[string]{Elements: models.RawGameLevel(event.GameLevels)}
+	preparedGameLevel := pq.Array(event.GameLevels)
 
 	_, err := p.pool.Exec(ctx, sqlInsertEvent,
 		event.ID, event.CreatorID, event.Subscribers, event.SportType, event.Address,
@@ -56,7 +56,7 @@ func (p *PostgresStorage) EditEvent(ctx context.Context, event *models.FullEvent
 		coordinates = ST_Point($16, $17, 4326)::geography
 		WHERE id = $18 AND deleted_at IS NULL;`
 
-	preparedGameLevels := pgtype.Array[string]{Elements: models.RawGameLevel(event.GameLevels)}
+	preparedGameLevels := pq.Array(event.GameLevels)
 
 	_, err := p.pool.Exec(ctx, sqlUpdateEvent,
 		event.CreatorID, event.SportType, event.Address,

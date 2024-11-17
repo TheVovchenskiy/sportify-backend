@@ -95,6 +95,7 @@ func (h *Handler) CreateEventSite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// this need for support (tg{} with empty values chat_id and user_id) === nil
 	if requestEventCreate.Tg != nil && (requestEventCreate.Tg.ChatID == nil || requestEventCreate.Tg.UserID == nil) {
 		requestEventCreate.Tg = nil
 	}

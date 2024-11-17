@@ -29,7 +29,7 @@ func (a *App) getCoordinatesByAddress(ctx context.Context, address string) (stri
 	values.Add("q", address)
 	req.URL.RawQuery = values.Encode()
 
-	a.logger.Infof(req.URL.String())
+	a.logger.Debug(req.URL.String())
 
 	req.Header.Set("User-Agent", userAgent)
 
@@ -44,7 +44,7 @@ func (a *App) getCoordinatesByAddress(ctx context.Context, address string) (stri
 		return "", "", fmt.Errorf("to read body: %w", err)
 	}
 
-	a.logger.Info("GET COORDINATES: ", address, string(body))
+	a.logger.Debug("GET COORDINATES: ", address, string(body))
 
 	var coordinates []models.ResponseOpenMapCoordinates
 
