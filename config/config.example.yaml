@@ -4,6 +4,8 @@ bot:
   api_url: "http://localhost:8090/api/v1/message"
 
 app:
+  auth_secret: "localhost_secret_example"
+  domain: "localhost"
   port: ":8080"
   api_prefix: "/api/v1/"
   path_photos: "./photos"

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/go-pkgz/auth/provider"
 	"io"
 	"net/http"
 	"strings"
@@ -40,19 +41,32 @@ type App interface {
 	SaveImage(ctx context.Context, file []byte) (string, error)
 	PayEvent(ctx context.Context, request *models.RequestEventPay) (*models.ResponseEventPay, error)
 	GetPayment(ctx context.Context, id uuid.UUID) (*models.ResponsesPayment, error)
+
+	// Auth block
+
+	NewCredCheckFunc(ctx context.Context) provider.CredCheckerFunc
+	ValidateUsernameAndPassword(username, password string) (string, string, error)
+	CreateUser(ctx context.Context, username, password string, tgUserID *int64) (models.ResponseSuccessLogin, error)
 }
 
 var _ App = (*app.App)(nil)
 
 type Handler struct {
-	folderID string
-	iamToken string
-	logger   *mylogger.MyLogger
-	app      App
+	folderID  string
+	iamToken  string
+	url       string
+	apiPrefix string
+	logger    *mylogger.MyLogger
+	app       App
 }
 
-func NewHandler(app App, logger *mylogger.MyLogger, folderID, IAMToken string) Handler {
-	return Handler{app: app, logger: logger, folderID: folderID, iamToken: IAMToken}
+func NewHandler(app App, logger *mylogger.MyLogger, folderID, IAMToken, url, apiPrefix string) Handler {
+	return Handler{app: app, logger: logger, folderID: folderID, iamToken: IAMToken, url: url, apiPrefix: apiPrefix}
+}
+
+func (h *Handler) Healthcheck(w http.ResponseWriter, _ *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("ok"))
 }
 
 func (h *Handler) handleCreateEventSiteError(ctx context.Context, w http.ResponseWriter, errOutside error) {

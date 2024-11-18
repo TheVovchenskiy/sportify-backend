@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+
 	"github.com/TheVovchenskiy/sportify-backend/pkg/common"
 	"github.com/TheVovchenskiy/sportify-backend/pkg/mylogger"
-	"net/http"
 
 	"github.com/google/uuid"
 )
@@ -213,7 +214,7 @@ func WriteResponseError(w http.ResponseWriter, responseError ResponseErr) {
 		return
 	}
 
-	w.WriteHeader(responseError.StatusCode)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(responseError.StatusCode)
 	w.Write(body)
 }

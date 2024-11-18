@@ -63,13 +63,17 @@ func GetGlobalConfig() *Config {
 // Config is a struct that contains the configuration for the Sportify application.
 type Config struct {
 	App struct {
+		AuthSecret    string `mapstructure:"auth_secret"`
+		Domain        string `mapstructure:"domain"`
 		Port          string `mapstructure:"port"`
 		APIPrefix     string `mapstructure:"api_prefix"`
 		PathPhotos    string `mapstructure:"path_photos"`
 		IAMToken      string `mapstructure:"iam_token"`
 		FolderID      string `mapstructure:"folder_id"`
 		URLPrefixFile string `mapstructure:"url_prefix_file"`
-		Yookassa      struct {
+
+		// Deprecated:
+		Yookassa struct {
 			ShopID       string `mapstructure:"shop_id"`
 			AgentID      string `mapstructure:"agent_id"`
 			TokenPayment string `mapstructure:"token_payment"`

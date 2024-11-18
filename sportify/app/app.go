@@ -70,6 +70,7 @@ type App struct {
 	fileStorage          FileStorage
 	eventStorage         EventStorage
 	paymentPayoutStorage PaymentPayoutStorage
+	authStorage          AuthStorage
 	yookassaClient       YookassaClient
 	httpClient           *http.Client
 	logger               *mylogger.MyLogger
@@ -80,6 +81,7 @@ func NewApp(
 	urlPrefixFile string,
 	fileStorage FileStorage,
 	eventStorage EventStorage,
+	authStorage AuthStorage,
 	logger *mylogger.MyLogger,
 	botAPI BotAPI,
 	// paymentPayoutStorage PaymentPayoutStorage,
@@ -89,6 +91,7 @@ func NewApp(
 		urlPrefixFile: urlPrefixFile,
 		eventStorage:  eventStorage,
 		fileStorage:   fileStorage,
+		authStorage:   authStorage,
 		httpClient:    http.DefaultClient,
 		logger:        logger,
 		botAPI:        botAPI,

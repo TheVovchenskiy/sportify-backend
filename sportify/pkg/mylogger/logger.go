@@ -80,3 +80,8 @@ func Get() (*MyLogger, error) {
 func (m *MyLogger) WithCtx(ctx context.Context) *MyLogger {
 	return &MyLogger{logger.With(zap.String("request_id", middleware.GetReqID(ctx)))}
 }
+
+// Logf need for auth package logger.L
+func (m *MyLogger) Logf(format string, args ...interface{}) {
+	logger.Errorf(format, args...)
+}
