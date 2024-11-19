@@ -57,6 +57,11 @@ func ConvertLoginResponseToCheck(handler CheckHandler, prev http.Handler) http.H
 				return
 			}
 
+			for key, values := range dummyWriter.Header() {
+				for _, value := range values {
+					writer.Header().Add(key, value)
+				}
+			}
 			handler.WriteCheckResponse(ctx, writer, &userInfo)
 		} else {
 			prev.ServeHTTP(writer, request)
