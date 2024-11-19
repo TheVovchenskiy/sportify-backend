@@ -44,7 +44,7 @@ docker-compose-down:
 
 .PHONY: docker-compose-build
 docker-compose-build:
-	docker compose --project-directory . -f deploy/docker-compose.yaml build
+	docker compose --project-directory . -f deploy/docker-compose.yaml build --no-cache
 
 names=backend_sportify
 .PHONY: docker-compose-logs

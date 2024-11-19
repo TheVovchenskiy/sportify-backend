@@ -109,6 +109,7 @@ func (s *Server) Run(ctx context.Context, configFile []string) error {
 		r.Use(middleware.Recoverer)
 		r.Use(middleware.RequestID)
 		r.Use(sportifymiddleware.Config)
+		r.Use(sportifymiddleware.ConvertErrUnknownToOurType)
 		r.Get("/healthcheck", handler.Healthcheck)
 		r.Get("/events", handler.FindEvents)
 		r.Get("/event/{id}", handler.GetEvent)
