@@ -28,6 +28,10 @@ func (a *App) NewCredCheckFunc(ctx context.Context) provider.CredCheckerFunc {
 	return func(username, plainPassword string) (bool, error) {
 		passHash, err := a.authStorage.GetPasswordByUsername(ctx, username)
 		if err != nil {
+			if errors.Is(err, db.ErrUserNotFound) {
+				return false, nil
+			}
+
 			return false, fmt.Errorf("get password by username: %w", err)
 		}
 

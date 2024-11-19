@@ -6,12 +6,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/TheVovchenskiy/sportify-backend/app"
-	"github.com/TheVovchenskiy/sportify-backend/models"
-	"github.com/go-pkgz/auth/provider"
 	"io"
 	"net/http"
 	"net/url"
+
+	"github.com/TheVovchenskiy/sportify-backend/app"
+	"github.com/TheVovchenskiy/sportify-backend/models"
+
+	"github.com/go-pkgz/auth/provider"
 )
 
 func (h *Handler) handleRegister(ctx context.Context, w http.ResponseWriter, errOutside error) {
