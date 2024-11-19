@@ -11,10 +11,52 @@ import (
 	"net/url"
 
 	"github.com/TheVovchenskiy/sportify-backend/app"
+	"github.com/TheVovchenskiy/sportify-backend/db"
 	"github.com/TheVovchenskiy/sportify-backend/models"
 
 	"github.com/go-pkgz/auth/provider"
+	"github.com/go-pkgz/auth/token"
 )
+
+func (h *Handler) handleCheck(ctx context.Context, w http.ResponseWriter, errOutside error) {
+	h.logger.WithCtx(ctx).Error(errOutside)
+
+	switch {
+	case errors.Is(errOutside, db.ErrUserNotFound):
+		models.WriteResponseError(w, models.NewResponseForbiddenErr("", db.ErrUserNotFound.Error()))
+	default:
+		models.WriteResponseError(w, models.NewResponseInternalServerErr("", models.InternalServerErrMessage))
+	}
+}
+
+func (h *Handler) WriteCheckResponse(ctx context.Context, w http.ResponseWriter, userInfo *token.User) {
+	userFull, err := h.app.GetUserFullByUsername(ctx, userInfo.Name)
+	if err != nil {
+		err = fmt.Errorf("to get user full by name: %w", err)
+		h.handleCheck(ctx, w, err)
+		return
+	}
+
+	var responseCheck models.ResponseSuccessLogin
+
+	responseCheck.Username = userInfo.Name
+	responseCheck.UserID = userFull.ID
+
+	models.WriteJSONResponse(w, responseCheck)
+}
+
+func (h *Handler) Check(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	userInfo, err := token.GetUserInfo(r)
+	if err != nil {
+		err = fmt.Errorf("to get user info: %w", err)
+		h.handleCheck(ctx, w, err)
+		return
+	}
+
+	h.WriteCheckResponse(ctx, w, &userInfo)
+}
 
 func (h *Handler) handleRegister(ctx context.Context, w http.ResponseWriter, errOutside error) {
 	h.logger.WithCtx(ctx).Error(errOutside)

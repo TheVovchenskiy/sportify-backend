@@ -4,10 +4,31 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/TheVovchenskiy/sportify-backend/models"
+
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
+
+func (p *PostgresStorage) GetUserFullByUsername(ctx context.Context, username string) (*models.UserFull, error) {
+	sqlSelect := `SELECT id, tg_id, username, password, created_at, updated_at FROM "public".user WHERE username = $1;`
+
+	row := p.pool.QueryRow(ctx, sqlSelect, username)
+
+	var user models.UserFull
+
+	err := row.Scan(&user.ID, &user.TgID, &user.Username, &user.Password, &user.CreatedAt, &user.UpdatedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("%w: %s", ErrUserNotFound, username)
+		}
+
+		return nil, fmt.Errorf("to scan user: %w", err)
+	}
+
+	return &user, nil
+}
 
 func (p *PostgresStorage) CheckUsernameExists(ctx context.Context, username string) (bool, error) {
 	sqlSelect := `SELECT username FROM "public".user WHERE username = $1;`

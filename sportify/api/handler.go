@@ -46,6 +46,7 @@ type App interface {
 
 	NewCredCheckFunc(ctx context.Context) provider.CredCheckerFunc
 	ValidateUsernameAndPassword(username, password string) (string, string, error)
+	GetUserFullByUsername(ctx context.Context, username string) (*models.UserFull, error)
 	CreateUser(ctx context.Context, username, password string, tgUserID *int64) (models.ResponseSuccessLogin, error)
 }
 

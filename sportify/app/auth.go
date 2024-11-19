@@ -19,10 +19,15 @@ import (
 type AuthStorage interface {
 	CheckUsernameExists(ctx context.Context, username string) (bool, error)
 	GetPasswordByUsername(ctx context.Context, username string) (string, error)
+	GetUserFullByUsername(ctx context.Context, username string) (*models.UserFull, error)
 	CreateUser(ctx context.Context, id uuid.UUID, username, password string, tgUserID *int64) (models.ResponseSuccessLogin, error)
 }
 
 var _ AuthStorage = (*db.PostgresStorage)(nil)
+
+func (a *App) GetUserFullByUsername(ctx context.Context, username string) (*models.UserFull, error) {
+	return a.authStorage.GetUserFullByUsername(ctx, username)
+}
 
 func (a *App) NewCredCheckFunc(ctx context.Context) provider.CredCheckerFunc {
 	return func(username, plainPassword string) (bool, error) {
