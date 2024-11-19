@@ -121,7 +121,7 @@ func (s *Server) Run(ctx context.Context, configFile []string) error {
 		r.With(authMiddleware.Auth).Get("/users/{id}/sub_archive/events", handler.GetUsersSubArchiveEvents)
 		r.With(authMiddleware.Auth).Post("/upload", handler.UploadFile)
 
-		r.Mount("/auth", authHandler)
+		r.Mount("/auth", sportifymiddleware.PostOnlyRestriction("/logout", authHandler))
 		r.Post("/auth/register", handler.Register)
 		r.With(authMiddleware.Auth).Get("/auth/check", handler.Healthcheck)
 
