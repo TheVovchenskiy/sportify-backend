@@ -169,7 +169,7 @@ func (r *ResponseSubscribeEvent) RemoveSubscriber(id uuid.UUID) error {
 type ResponseErr struct {
 	StatusCode int    `json:"-"`
 	ErrName    string `json:"error_name"`
-	ErrMessage string `json:"error_message"`
+	ErrMessage string `json:"error"`
 }
 
 func NewResponseBadRequestErr(name, message string) ResponseErr {
