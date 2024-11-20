@@ -1,0 +1,50 @@
+{
+    "tg_chat_id": -4508299977,
+    "event": {
+        "id": "test_event_id",
+        "creator": {
+            "id": "test_creator_id",
+            "tg_id": 794758483,
+            "username": "test_creator_username"
+        },
+        "sport_type": "football",
+        "address": "test_address",
+        "date_and_time": {
+            "date": "2023-05-01",
+            "start_time": "12:00",
+            "end_time": "14:00"
+        },
+        "price": 100,
+        "is_free": false,
+        "game_levels": [
+            "mid_minus",
+            "mid"
+        ],
+        "capacity": 10,
+        "busy": 5,
+        "subscribers": [
+            {
+                "id": "test_subscriber_id1",
+                "username": "test_subscriber_username1"
+            },
+            {
+                "id": "test_subscriber_id2",
+                "username": "test_subscriber_username2"
+            },
+            {
+                "id": "test_subscriber_id3",
+                "username": "test_subscriber_username3"
+            },
+            {
+                "id": "test_subscriber_id4",
+                "username": "test_subscriber_username4"
+            },
+            {
+                "id": "test_subscriber_id5Ø",
+                "tg_id": 794758483,
+                "username": "test_subscriber_username5"
+            }
+        ],
+        "url_preview": "https://cdn.britannica.com/51/190751-131-B431C216/soccer-ball-goal.jpg"
+    }
+}

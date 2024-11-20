@@ -1,8 +1,9 @@
 package models
 
 import (
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type UserFull struct {
@@ -12,4 +13,12 @@ type UserFull struct {
 	Password  string
 	CreatedAt time.Time
 	UpdatedAt time.Time
+}
+
+func (u *UserFull) ToBotUser() *BotUser {
+	return &BotUser{
+		ID:       u.ID,
+		Username: u.Username,
+		TgID:     u.TgID,
+	}
 }

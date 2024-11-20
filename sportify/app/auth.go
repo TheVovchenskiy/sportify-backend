@@ -20,6 +20,8 @@ type AuthStorage interface {
 	CheckUsernameExists(ctx context.Context, username string) (bool, error)
 	GetPasswordByUsername(ctx context.Context, username string) (string, error)
 	GetUserFullByUsername(ctx context.Context, username string) (*models.UserFull, error)
+	GetUserFullByTgID(ctx context.Context, tgID int64) (*models.UserFull, error)
+	GetUserFullByID(ctx context.Context, id uuid.UUID) (*models.UserFull, error)
 	CreateUser(ctx context.Context, id uuid.UUID, username, password string, tgUserID *int64) (models.ResponseSuccessLogin, error)
 }
 

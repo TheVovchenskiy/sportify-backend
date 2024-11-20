@@ -46,6 +46,30 @@ func NewFullEventSite(eventID uuid.UUID, userID uuid.UUID, eventCreteSite *Event
 	}
 }
 
+func (e *FullEvent) ToBotEvent(creator *BotUser, subscribers []*BotUser) *BotEvent {
+	subs := make([]BotUser, 0)
+	for _, sub := range subscribers {
+		subs = append(subs, *sub)
+	}
+
+	return &BotEvent{ //nolint:exhaustruct
+		ID:          e.ID,
+		Creator:     *creator,
+		SportType:   e.SportType,
+		Address:     e.Address,
+		DateAndTime: e.DateAndTime,
+		Price:       e.Price,
+		IsFree:      e.IsFree,
+		GameLevels:  e.GameLevels,
+		Capacity:    e.Capacity,
+		Busy:        e.Busy,
+		Subscribers: subs,
+		URLPreview:  e.URLPreview,
+		Latitude:    e.Latitude,
+		Longitude:   e.Longitude,
+	}
+}
+
 type ShortEvent struct {
 	ID          uuid.UUID   `json:"id"`
 	CreatorID   uuid.UUID   `json:"creator_id"`

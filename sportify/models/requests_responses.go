@@ -78,8 +78,9 @@ type RequestEventCreateSite struct {
 }
 
 type RequestSubscribeEvent struct {
-	SubscribeFlag bool      `json:"sub"`
-	UserID        uuid.UUID `json:"user_id"`
+	SubscribeFlag bool       `json:"sub"`
+	UserID        *uuid.UUID `json:"user_id"`
+	TgID          *int64     `json:"tg_id"`
 }
 
 func WriteJSONResponse(w http.ResponseWriter, response any) {

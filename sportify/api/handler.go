@@ -6,11 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/go-pkgz/auth/provider"
 	"io"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/go-pkgz/auth/provider"
 
 	"github.com/TheVovchenskiy/sportify-backend/app"
 	"github.com/TheVovchenskiy/sportify-backend/db"
@@ -34,7 +35,8 @@ type App interface {
 	SubscribeEvent(
 		ctx context.Context,
 		id uuid.UUID,
-		userID uuid.UUID,
+		userID *uuid.UUID,
+		tgID *int64,
 		subscribe bool,
 	) (*models.ResponseSubscribeEvent, error)
 	DetectEventMessage(text string, regexps []string, minMatches int) (bool, error)
@@ -99,6 +101,7 @@ func (h *Handler) CreateEventSite(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logger.WithCtx(ctx).Infow("Got request", "body", string(body))
+	// logger.WithCtx(ctx).Infow("Got request", "body_len", len(body))
 
 	var requestEventCreate models.RequestEventCreateSite
 
@@ -110,8 +113,8 @@ func (h *Handler) CreateEventSite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// this need for support (tg{} with empty values chat_id and user_id) === nil
-	if requestEventCreate.Tg != nil && (requestEventCreate.Tg.ChatID == nil || requestEventCreate.Tg.UserID == nil) {
+	// this need for support (tg{} with empty values chat_id) === nil
+	if requestEventCreate.Tg != nil && (requestEventCreate.Tg.ChatID == nil) {
 		requestEventCreate.Tg = nil
 	}
 
@@ -482,7 +485,20 @@ func (h *Handler) SubscribeEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responseSubscribeEvent, err := h.app.SubscribeEvent(ctx, eventID, reqSubEvent.UserID, reqSubEvent.SubscribeFlag)
+	if reqSubEvent.UserID == nil && reqSubEvent.TgID == nil {
+		err = fmt.Errorf("%w: %s", ErrRequestSubscribeEvent, "не указан user_id или tg_id")
+
+		h.handleSubscribeEventError(ctx, w, err)
+		return
+	}
+
+	responseSubscribeEvent, err := h.app.SubscribeEvent(
+		ctx,
+		eventID,
+		reqSubEvent.UserID,
+		reqSubEvent.TgID,
+		reqSubEvent.SubscribeFlag,
+	)
 	if err != nil {
 		h.handleSubscribeEventError(ctx, w, err)
 		return
