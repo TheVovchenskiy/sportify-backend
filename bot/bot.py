@@ -3,8 +3,8 @@ import logging
 import os
 import time
 
-from aiohttp import web
 import httpx
+from aiohttp import web
 from models.event import (
     EventCreatedRequest,
     EventDeletedRequest,
@@ -77,18 +77,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         [
             InlineKeyboardButton(
                 "Главная",
-                url="https://t.me/ond_sportify_test_bot?startapp=main",
-                # web_app=WebAppInfo(url="https://91.219.227.107"),
+                url=f"https://t.me/ond_sportify_bot?startapp=events__{chat_id}",
             ),
             InlineKeyboardButton(
                 "Создать событие",
-                url=f"https://t.me/ond_sportify_test_bot?startapp=create_event__{chat_id}",
+                url=f"https://t.me/ond_sportify_bot?startapp=create_event__{chat_id}",
             ),
         ],
         [
             InlineKeyboardButton(
                 "Карта",
-                url="https://t.me/ond_sportify_test_bot?startapp=map",
+                url=f"https://t.me/ond_sportify_bot?startapp=map__{chat_id}",
             ),
         ],
     ]
