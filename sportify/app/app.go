@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/TheVovchenskiy/sportify-backend/pkg/common"
 	"net/http"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/TheVovchenskiy/sportify-backend/pkg/common"
 
 	"github.com/TheVovchenskiy/sportify-backend/app/botapi"
 	"github.com/TheVovchenskiy/sportify-backend/app/yookassa"
@@ -45,6 +46,8 @@ var _ FileStorage = (*db.FileSystemStorage)(nil)
 
 type BotAPI interface {
 	EventCreated(ctx context.Context, eventCreateRequest models.EventCreatedBotRequest) error
+	EventUpdated(ctx context.Context, eventUpdateRequest models.EventUpdatedBotRequest) error
+	EventDeleted(ctx context.Context, eventDeleteRequest models.EventDeletedBotRequest) error
 }
 
 var _ BotAPI = (*botapi.BotAPI)(nil)
@@ -135,6 +138,71 @@ func (a *App) CreateEventTg(ctx context.Context, fullEvent *models.FullEvent) (*
 	return fullEvent, nil
 }
 
+func (a *App) getBotUser(ctx context.Context, userID uuid.UUID) (*models.BotUser, error) {
+	fullUser, err := a.authStorage.GetUserFullByID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("to get user: %w", err)
+	}
+
+	return fullUser.ToBotUser(), nil
+}
+
+func (a *App) getBotEvent(ctx context.Context, eventID uuid.UUID) (*models.BotEvent, error) {
+	fullEvent, err := a.GetEvent(ctx, eventID)
+	if err != nil {
+		return nil, fmt.Errorf("to get event: %w", err)
+	}
+
+	creator, err := a.getBotUser(ctx, fullEvent.CreatorID)
+	if err != nil {
+		return nil, fmt.Errorf("to get creator: %w", err)
+	}
+
+	subscribers := []*models.BotUser{}
+	// TODO: make batch request
+	for _, subscriberID := range fullEvent.Subscribers {
+		subscriber, err := a.getBotUser(ctx, subscriberID)
+		if err != nil {
+			return nil, fmt.Errorf("to get subscriber: %w", err)
+		}
+
+		subscribers = append(subscribers, subscriber)
+	}
+
+	return fullEvent.ToBotEvent(creator, subscribers), nil
+}
+
+func (a *App) onEventUpdate(ctx context.Context, eventID uuid.UUID) error {
+	botEvent, err := a.getBotEvent(ctx, eventID)
+	if err != nil {
+		return fmt.Errorf("to get bot event: %w", err)
+	}
+
+	eventUpdated := models.EventUpdatedBotRequest{
+		Event: *botEvent,
+	}
+
+	err = a.botAPI.EventUpdated(ctx, eventUpdated)
+	if err != nil {
+		return fmt.Errorf("to send event updated: %w", err)
+	}
+
+	return nil
+}
+
+func (a *App) onEventDelete(ctx context.Context, eventID uuid.UUID) error {
+	eventDeleted := models.EventDeletedBotRequest{
+		EventID: eventID,
+	}
+
+	err := a.botAPI.EventDeleted(ctx, eventDeleted)
+	if err != nil {
+		return fmt.Errorf("to send event deleted: %w", err)
+	}
+
+	return nil
+}
+
 func (a *App) CreateEventSite(ctx context.Context, request *models.RequestEventCreateSite) (*models.FullEvent, error) {
 	result := models.NewFullEventSite(uuid.New(), request.UserID, &request.CreateEvent)
 
@@ -144,21 +212,29 @@ func (a *App) CreateEventSite(ctx context.Context, request *models.RequestEventC
 	}
 
 	if request.Tg != nil {
+		a.logger.WithCtx(ctx).Infow("Creating tg event", "event_id", result.ID, "error", err)
+
 		chatID, err := strconv.ParseInt(*request.Tg.ChatID, 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf("to parse chatID: %w", err)
 		}
 
+		botEvent, err := a.getBotEvent(ctx, result.ID)
+		if err != nil {
+			a.logger.WithCtx(ctx).Warnw("Unable to get bot event", "event_id", result.ID, "error", err)
+			return result, nil
+		}
+
 		eventCreateRequest := models.EventCreatedBotRequest{
 			TgChatID: &chatID,
-			TgUserID: request.Tg.UserID,
-			Event:    result.ShortEvent,
+			// TgUserID: request.Tg.UserID,
+			Event: *botEvent,
 		}
 
 		err = a.botAPI.EventCreated(ctx, eventCreateRequest)
 		if err != nil {
-			// TODO: maybe we should consider not to send 500 error to user in this case
-			return nil, fmt.Errorf("to send to bot created event: %w", err)
+			a.logger.WithCtx(ctx).Warnw("Unable to create bot event", "event_id", result.ID, "error", err)
+			return result, nil
 		}
 	}
 
@@ -214,6 +290,11 @@ func (a *App) EditEventSite(ctx context.Context, request *models.RequestEventEdi
 	preResult.IsFree = eventFromDB.IsFree
 	preResult.RawMessage = eventFromDB.RawMessage
 
+	err = a.onEventUpdate(ctx, preResult.ID)
+	if err != nil {
+		a.logger.WithCtx(ctx).Warnw("Unable to update bot event", "event_id", preResult.ID, "error", err)
+	}
+
 	return preResult, nil
 }
 
@@ -234,6 +315,11 @@ func (a *App) DeleteEvent(ctx context.Context, userID uuid.UUID, eventID uuid.UU
 		return fmt.Errorf("to delete event: %w", err)
 	}
 
+	err = a.onEventDelete(ctx, eventID)
+	if err != nil {
+		a.logger.WithCtx(ctx).Warnw("Unable to deleted bot event", "event_id", eventID, "error", err)
+	}
+
 	return nil
 }
 
@@ -249,8 +335,26 @@ func (a *App) GetEvent(ctx context.Context, id uuid.UUID) (*models.FullEvent, er
 	return a.eventStorage.GetEvent(ctx, id)
 }
 
-func (a *App) SubscribeEvent(ctx context.Context, id uuid.UUID, userID uuid.UUID, subscribe bool) (*models.ResponseSubscribeEvent, error) {
-	return a.eventStorage.SubscribeEvent(ctx, id, userID, subscribe)
+func (a *App) SubscribeEvent(ctx context.Context, id uuid.UUID, userID *uuid.UUID, tgID *int64, subscribe bool) (*models.ResponseSubscribeEvent, error) {
+	if userID == nil && tgID != nil {
+		userFullFromTgID, err := a.authStorage.GetUserFullByTgID(ctx, *tgID)
+		if err != nil {
+			return nil, fmt.Errorf("to get user full by tg id: %w", err)
+		}
+		userID = &userFullFromTgID.ID
+	}
+
+	responseSubscribeEvent, err := a.eventStorage.SubscribeEvent(ctx, id, *userID, subscribe)
+	if err != nil {
+		return nil, fmt.Errorf("to subscribe event: %w", err)
+	}
+
+	err = a.onEventUpdate(ctx, responseSubscribeEvent.ID)
+	if err != nil {
+		a.logger.WithCtx(ctx).Warnw("Unable to update bot event", "event_id", responseSubscribeEvent.ID, "error", err)
+	}
+
+	return responseSubscribeEvent, nil
 }
 
 var ErrPayFree = errors.New("вы не можете оплатить бесплатное событие")
