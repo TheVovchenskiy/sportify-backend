@@ -1,0 +1,9 @@
+-- It`s not necessary solve this problem now
+-- If it will be necessary we can do something like this:
+-- 1. create new type _game_level_enum
+-- 2. change in table "events" to new type _game_level_enum
+-- 3. DROP existent game_level_enum
+-- 4. CREATE TYPE new game_level_enum
+-- 5. change in table "events" to new type game_level_enum
+-- And don`t forget problem "What do with rows with existing values of enum, but that not
+-- exist in old game_level_enum?"
