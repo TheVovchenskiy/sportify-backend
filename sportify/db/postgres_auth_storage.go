@@ -11,6 +11,44 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+func (p *PostgresStorage) GetUserFullByID(ctx context.Context, id uuid.UUID) (*models.UserFull, error) {
+	sqlSelect := `SELECT id, tg_id, username, password, created_at, updated_at FROM "public".user WHERE id = $1;`
+
+	row := p.pool.QueryRow(ctx, sqlSelect, id)
+
+	var user models.UserFull
+
+	err := row.Scan(&user.ID, &user.TgID, &user.Username, &user.Password, &user.CreatedAt, &user.UpdatedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("%w: %s", ErrUserNotFound, id)
+		}
+
+		return nil, fmt.Errorf("to scan user: %w", err)
+	}
+
+	return &user, nil
+}
+
+func (p *PostgresStorage) GetUserFullByTgID(ctx context.Context, tgID int64) (*models.UserFull, error) {
+	sqlSelect := `SELECT id, tg_id, username, password, created_at, updated_at FROM "public".user WHERE tg_id = $1;`
+
+	row := p.pool.QueryRow(ctx, sqlSelect, tgID)
+
+	var user models.UserFull
+
+	err := row.Scan(&user.ID, &user.TgID, &user.Username, &user.Password, &user.CreatedAt, &user.UpdatedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("%w: %d", ErrUserNotFound, tgID)
+		}
+
+		return nil, fmt.Errorf("to scan user: %w", err)
+	}
+
+	return &user, nil
+}
+
 func (p *PostgresStorage) GetUserFullByUsername(ctx context.Context, username string) (*models.UserFull, error) {
 	sqlSelect := `SELECT id, tg_id, username, password, created_at, updated_at FROM "public".user WHERE username = $1;`
 

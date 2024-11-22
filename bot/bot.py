@@ -1,19 +1,18 @@
-#!/usr/bin/env python
-# pylint: disable=unused-argument
-# This program is dedicated to the public domain under the CC0 license.
-
-"""
-Basic example for a bot that uses inline keyboards. For an in-depth explanation, check out
- https://github.com/python-telegram-bot/python-telegram-bot/wiki/InlineKeyboard-Example.
-"""
 import asyncio
 import logging
 import os
 import time
 
+import httpx
 from aiohttp import web
-from models import EventCreatedRequest
+from models.event import (
+    EventCreatedRequest,
+    EventDeletedRequest,
+    EventMessage,
+    EventUpdatedRequest,
+)
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, WebAppInfo
+from telegram.constants import ParseMode
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
@@ -35,6 +34,41 @@ api_app = web.Application()
 bot_application = Application.builder().token(os.getenv("BOT_TOKEN")).build()
 
 
+event_id_to_message_id: dict[str, EventMessage] = {}
+
+
+async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Parses the CallbackQuery and updates the message text."""
+    query = update.callback_query
+
+    await query.answer()
+
+    target_event_id = None
+
+    for event_id, message in event_id_to_message_id.items():
+        if message.message.id == query.message.id:
+            target_event_id = event_id
+            break
+
+    if target_event_id is None:
+        return
+
+    resp = httpx.put(
+        f"http://0.0.0.0:8080/api/v1/event/sub/{target_event_id}",
+        json={
+            "sub": True,
+            "tg_id": query.from_user.id,
+        },
+    )
+
+    if 200 <= resp.status_code < 300:
+        LOGGER.info(f"Successfully subscribed to event {target_event_id}")
+    else:
+        LOGGER.error(
+            f"Failed to subscribe to event {target_event_id}, error: {resp.text}"
+        )
+
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Sends a message with three inline buttons attached."""
     chat_id = update.message.chat_id
@@ -43,18 +77,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         [
             InlineKeyboardButton(
                 "Главная",
-                url="https://t.me/ond_sportify_test_bot?startapp=main",
-                # web_app=WebAppInfo(url="https://91.219.227.107"),
+                url=f"https://t.me/ond_sportify_bot?startapp=events__{chat_id}",
             ),
             InlineKeyboardButton(
                 "Создать событие",
-                url=f"https://t.me/ond_sportify_test_bot?startapp=create_event__{chat_id}",
+                url=f"https://t.me/ond_sportify_bot?startapp=create_event__{chat_id}",
             ),
         ],
         [
             InlineKeyboardButton(
                 "Карта",
-                url="https://t.me/ond_sportify_test_bot?startapp=map",
+                url=f"https://t.me/ond_sportify_bot?startapp=map__{chat_id}",
             ),
         ],
     ]
@@ -69,7 +102,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Displays info on how to use the bot."""
-    LOGGER.debug("help_command")
+    LOGGER.debug(f"Received /help command (update={update})")
     await update.message.reply_text("Use /start to test this bot.")
 
 
@@ -89,23 +122,149 @@ async def handle_event_created(request: web.Request) -> web.Response:
             LOGGER.exception(f"Error parsing request data {data}")
             return web.json_response({"status": "fail", "reason": str(e)}, status=400)
 
-        message = str(erm.event)
+        try:
+            message = str(erm.event)
+        except Exception as e:
+            LOGGER.exception(f"Error creating message for event {repr(erm)}")
+            return web.json_response({"status": "fail", "reason": str(e)}, status=500)
 
         try:
-            await bot_application.bot.send_message(chat_id=erm.tg_chat_id, text=message)
+            keyboard = [
+                [
+                    InlineKeyboardButton(
+                        "Записаться/Отписаться",
+                        callback_data="1",
+                    ),
+                ],
+            ]
+
+            LOGGER.info(f"Sending message to chat {erm.tg_chat_id}")
+            message = await bot_application.bot.send_photo(
+                chat_id=erm.tg_chat_id,
+                photo=erm.event.url_preview,
+                caption=message,
+                parse_mode=ParseMode.MARKDOWN_V2,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+            )
+            event_id_to_message_id[erm.event.id] = EventMessage(
+                event=erm.event,
+                message=message,
+            )
         except Exception as e:
             LOGGER.exception(f"Error sending message to chat {erm.tg_chat_id}")
             return web.json_response({"status": "fail", "reason": str(e)}, status=500)
 
         return web.json_response({"status": "success"})
     except Exception as e:
-        print(f"Error handling event creation: {e}")
+        LOGGER.exception(f"Error handling event creation")
+        return web.json_response(
+            {"status": "fail", "reason": "Internal server error"}, status=500
+        )
+
+
+async def handle_event_updated(request: web.Request) -> web.Response:
+    try:
+        try:
+            data = await request.json()
+        except ValueError:
+            LOGGER.exception("Error parsing request data")
+            return web.json_response(
+                {"status": "fail", "reason": "Invalid JSON"},
+                status=400,
+            )
+        try:
+            erm = EventUpdatedRequest.from_dict(data=data)
+        except TypeError as e:
+            LOGGER.exception(f"Error parsing request data {data}")
+            return web.json_response({"status": "fail", "reason": str(e)}, status=400)
+
+        if erm.event.id not in event_id_to_message_id:
+            LOGGER.warning(f"Event {erm.event.id} not found")
+            return web.json_response(
+                {"status": "fail", "reason": "Event not found"}, status=404
+            )
+
+        erm_old = event_id_to_message_id[erm.event.id]
+
+        try:
+            new_message = str(erm.event)
+        except Exception as e:
+            LOGGER.exception(f"Error creating message for event {repr(erm)}")
+            return web.json_response({"status": "fail", "reason": str(e)}, status=500)
+
+        try:
+            keyboard = [
+                [
+                    InlineKeyboardButton(
+                        "Записаться/Отписаться",
+                        callback_data="1",
+                    ),
+                ],
+            ]
+
+            await bot_application.bot.edit_message_caption(
+                chat_id=erm_old.message.chat.id,
+                caption=new_message,
+                message_id=erm_old.message.id,
+                parse_mode=ParseMode.MARKDOWN_V2,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+            )
+        except Exception as e:
+            LOGGER.exception(f"Error editing event {erm.event.id!r}")
+            return web.json_response({"status": "fail", "reason": str(e)}, status=500)
+
+        return web.json_response({"status": "success"})
+    except Exception as e:
+        LOGGER.exception(f"Error handling event creation")
+        return web.json_response(
+            {"status": "fail", "reason": "Internal server error"}, status=500
+        )
+
+
+async def handle_event_deleted(request: web.Request) -> web.Response:
+    try:
+        try:
+            data = await request.json()
+        except ValueError:
+            LOGGER.exception("Error parsing request data")
+            return web.json_response(
+                {"status": "fail", "reason": "Invalid JSON"},
+                status=400,
+            )
+        try:
+            erm = EventDeletedRequest.from_dict(data=data)
+        except TypeError as e:
+            LOGGER.exception(f"Error parsing request data {data}")
+            return web.json_response({"status": "fail", "reason": str(e)}, status=400)
+
+        if erm.event_id not in event_id_to_message_id:
+            LOGGER.warning(f"Event {erm.event_id} not found")
+            return web.json_response(
+                {"status": "fail", "reason": "Event not found"}, status=404
+            )
+
+        erm_old = event_id_to_message_id[erm.event_id]
+
+        try:
+            await bot_application.bot.delete_message(
+                chat_id=erm_old.message.chat.id,
+                message_id=erm_old.message.id,
+            )
+        except Exception as e:
+            LOGGER.exception(f"Error deleting event {erm.event_id!r}")
+            return web.json_response({"status": "fail", "reason": str(e)}, status=500)
+
+        return web.json_response({"status": "success"})
+    except Exception as e:
+        LOGGER.exception(f"Error handling event creation")
         return web.json_response(
             {"status": "fail", "reason": "Internal server error"}, status=500
         )
 
 
 api_app.router.add_post("/event/created", handle_event_created)
+api_app.router.add_put("/event/updated", handle_event_updated)
+api_app.router.add_delete("/event/deleted", handle_event_deleted)
 
 
 def main() -> None:
@@ -114,7 +273,7 @@ def main() -> None:
     asyncio.set_event_loop(loop)
 
     bot_application.add_handler(CommandHandler("start", start))
-    # application.add_handler(CallbackQueryHandler(button))
+    bot_application.add_handler(CallbackQueryHandler(button))
     bot_application.add_handler(CommandHandler("help", help_command))
 
     loop.run_until_complete(bot_application.initialize())
