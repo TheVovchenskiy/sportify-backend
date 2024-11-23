@@ -33,7 +33,7 @@ func (s *Server) runTgHandler(ctx context.Context, cfg *config.Config, handler a
 		r.Use(middleware.Logger)
 
 		r.Post("/message", handler.TryCreateEvent)
-		r.Put("/events/{event_id}/subscribers", handler.SubscribeEvent)
+		r.Put("/events/{id}/subscribers", handler.SubscribeEvent)
 		r.Get("/events/{event_id}/subscribers", handler.UserIsSubscribed)
 	})
 

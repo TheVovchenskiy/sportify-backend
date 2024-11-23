@@ -514,6 +514,8 @@ func (h *Handler) handleUserIsSubscribedError(ctx context.Context, w http.Respon
 	h.logger.WithCtx(ctx).Error(errOutside)
 
 	switch {
+	case errors.Is(errOutside, db.ErrUserNotFound):
+		models.WriteResponseError(w, models.NewResponseNotFoundErr("", db.ErrUserNotFound.Error()))
 	case errors.Is(errOutside, ErrNoUserIDQueryParams):
 		models.WriteResponseError(w, models.NewResponseBadRequestErr("", ErrNoUserIDQueryParams.Error()))
 	case errors.Is(errOutside, models.ErrUserIDOrTgIDIsRequired):

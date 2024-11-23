@@ -41,6 +41,8 @@ async def subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Parses the CallbackQuery and updates the message text."""
     query = update.callback_query
 
+    LOGGER.debug(f"Subscribe query: {query}")
+
     await query.answer()
 
     target_event_id = None
@@ -51,11 +53,20 @@ async def subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             break
 
     if target_event_id is None:
+        LOGGER.info(f"No event found for message {query.message.id}")
         return
 
     is_subscribed_response = httpx.get(
         f"http://0.0.0.0:8090/api/v1/events/{target_event_id}/subscribers?tg_id={query.from_user.id}",
     )
+
+    LOGGER.info(f"Is subscribed response: {is_subscribed_response.json()}")
+
+    if "is_subscribed" not in is_subscribed_response.json():
+        LOGGER.error(
+            f"Failed to check if user {query.from_user.id} is subscribed to event {target_event_id}, error: {is_subscribed_response.text}"
+        )
+        return
 
     resp = httpx.put(
         f"http://0.0.0.0:8090/api/v1/events/{target_event_id}/subscribers",
@@ -65,11 +76,13 @@ async def subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         },
     )
 
+    LOGGER.info(f"Subscribe response: {resp.json()}")
+
     if 200 <= resp.status_code < 300:
-        LOGGER.info(f"Successfully subscribed to event {target_event_id}")
+        LOGGER.info(f"Successfully subscribed/unsubscribed to event {target_event_id}")
     else:
         LOGGER.error(
-            f"Failed to subscribe to event {target_event_id}, error: {resp.text}"
+            f"Failed to subscribe/unsubscribe to event {target_event_id}, error: {resp.text}"
         )
 
 
@@ -94,6 +107,26 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                 url=f"https://t.me/ond_sportify_bot?startapp=map__{chat_id}",
             ),
         ],
+    ]
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await update.message.reply_text(
+        "Выберете действие",
+        reply_markup=reply_markup,
+    )
+
+
+async def test(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Sends a message with three inline buttons attached."""
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                "Записаться/Отписаться",
+                callback_data="1",
+            ),
+        ],
+        [],
     ]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -183,7 +216,7 @@ async def handle_event_updated(request: web.Request) -> web.Response:
             return web.json_response({"status": "fail", "reason": str(e)}, status=400)
 
         if erm.event.id not in event_id_to_message_id:
-            LOGGER.warning(f"Event {erm.event.id} not found")
+            LOGGER.info(f"Event {erm.event.id} not found")
             return web.json_response(
                 {"status": "fail", "reason": "Event not found"}, status=404
             )
@@ -242,7 +275,7 @@ async def handle_event_deleted(request: web.Request) -> web.Response:
             return web.json_response({"status": "fail", "reason": str(e)}, status=400)
 
         if erm.event_id not in event_id_to_message_id:
-            LOGGER.warning(f"Event {erm.event_id} not found")
+            LOGGER.info(f"Event {erm.event_id} not found")
             return web.json_response(
                 {"status": "fail", "reason": "Event not found"}, status=404
             )
@@ -277,12 +310,15 @@ def main() -> None:
     asyncio.set_event_loop(loop)
 
     bot_application.add_handler(CommandHandler("start", start))
+    bot_application.add_handler(CommandHandler("test", test))
     bot_application.add_handler(CallbackQueryHandler(subscribe))
     bot_application.add_handler(CommandHandler("help", help_command))
 
     loop.run_until_complete(bot_application.initialize())
     # await application.post_init()
-    loop.run_until_complete(bot_application.updater.start_polling())
+    loop.run_until_complete(
+        bot_application.updater.start_polling(allowed_updates=Update.ALL_TYPES)
+    )
     loop.run_until_complete(bot_application.start())
 
     runner = web.AppRunner(api_app)
