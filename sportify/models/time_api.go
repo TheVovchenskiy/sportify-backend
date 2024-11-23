@@ -45,12 +45,17 @@ func (d *DateAndTime) UnmarshalJSON(raw []byte) error {
 		return err
 	}
 
+	year, month, day := dateAndTimeAPI.Date.Date()
+
 	startTime, err := time.Parse(time.TimeOnly, dateAndTimeAPI.StartTime)
 	if err != nil {
 		return fmt.Errorf("to parse start time: %w", err)
 	}
 
 	startTime = utils.SetTimeZone(dateAndTimeAPI.Date, startTime)
+
+	// TODO later change from UTC to correct
+	startTime = time.Date(year, month, day, startTime.Hour(), startTime.Minute(), startTime.Second(), 0, time.UTC)
 
 	var endTime *time.Time
 	if dateAndTimeAPI.EndTime != nil {
@@ -61,6 +66,9 @@ func (d *DateAndTime) UnmarshalJSON(raw []byte) error {
 
 		endTimeValue = utils.SetTimeZone(dateAndTimeAPI.Date, endTimeValue)
 		endTime = &endTimeValue
+
+		// TODO later change from UTC to correct
+		endTime = common.Ref(time.Date(year, month, day, endTime.Hour(), endTime.Minute(), endTime.Second(), 0, time.UTC))
 	}
 
 	d.Date = dateAndTimeAPI.Date
