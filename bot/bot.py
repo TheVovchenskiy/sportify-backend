@@ -37,7 +37,7 @@ bot_application = Application.builder().token(os.getenv("BOT_TOKEN")).build()
 event_id_to_message_id: dict[str, EventMessage] = {}
 
 
-async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Parses the CallbackQuery and updates the message text."""
     query = update.callback_query
 
@@ -53,10 +53,14 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if target_event_id is None:
         return
 
+    is_subscribed_response = httpx.get(
+        f"http://0.0.0.0:8090/api/v1/events/{target_event_id}/subscribers?tg_id={query.from_user.id}",
+    )
+
     resp = httpx.put(
-        f"http://0.0.0.0:8080/api/v1/event/sub/{target_event_id}",
+        f"http://0.0.0.0:8090/api/v1/events/{target_event_id}/subscribers",
         json={
-            "sub": True,
+            "sub": not is_subscribed_response.json()["is_subscribed"],
             "tg_id": query.from_user.id,
         },
     )
@@ -273,7 +277,7 @@ def main() -> None:
     asyncio.set_event_loop(loop)
 
     bot_application.add_handler(CommandHandler("start", start))
-    bot_application.add_handler(CallbackQueryHandler(button))
+    bot_application.add_handler(CallbackQueryHandler(subscribe))
     bot_application.add_handler(CommandHandler("help", help_command))
 
     loop.run_until_complete(bot_application.initialize())

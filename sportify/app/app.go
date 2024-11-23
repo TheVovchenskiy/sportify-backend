@@ -357,6 +357,29 @@ func (a *App) SubscribeEvent(ctx context.Context, id uuid.UUID, userID *uuid.UUI
 	return responseSubscribeEvent, nil
 }
 
+func (a *App) UserIsSubscribed(ctx context.Context, eventID uuid.UUID, reqParams *models.RequestUserIsSubscribedParams) (bool, error) {
+	if reqParams.TgID != nil {
+		userFullFromTgID, err := a.authStorage.GetUserFullByTgID(ctx, *reqParams.TgID)
+		if err != nil {
+			return false, fmt.Errorf("to get user full by tg id: %w", err)
+		}
+		reqParams.UserID = &userFullFromTgID.ID
+	}
+
+	eventFull, err := a.eventStorage.GetEvent(ctx, eventID)
+	if err != nil {
+		return false, fmt.Errorf("to get event: %w", err)
+	}
+
+	for _, subscriber := range eventFull.Subscribers {
+		if subscriber == *reqParams.UserID {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
 var ErrPayFree = errors.New("вы не можете оплатить бесплатное событие")
 
 func (a *App) PayEvent(ctx context.Context, request *models.RequestEventPay) (*models.ResponseEventPay, error) {

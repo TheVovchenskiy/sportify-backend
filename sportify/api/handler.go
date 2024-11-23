@@ -39,6 +39,7 @@ type App interface {
 		tgID *int64,
 		subscribe bool,
 	) (*models.ResponseSubscribeEvent, error)
+	UserIsSubscribed(ctx context.Context, eventID uuid.UUID, reqParams *models.RequestUserIsSubscribedParams) (bool, error)
 	DetectEventMessage(text string, regexps []string, minMatches int) (bool, error)
 	SaveImage(ctx context.Context, file []byte) (string, error)
 	PayEvent(ctx context.Context, request *models.RequestEventPay) (*models.ResponseEventPay, error)
@@ -505,6 +506,51 @@ func (h *Handler) SubscribeEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	models.WriteJSONResponse(w, responseSubscribeEvent)
+}
+
+var ErrNoUserIDQueryParams = errors.New("не указан user_id в query params")
+
+func (h *Handler) handleUserIsSubscribedError(ctx context.Context, w http.ResponseWriter, errOutside error) {
+	h.logger.WithCtx(ctx).Error(errOutside)
+
+	switch {
+	case errors.Is(errOutside, ErrNoUserIDQueryParams):
+		models.WriteResponseError(w, models.NewResponseBadRequestErr("", ErrNoUserIDQueryParams.Error()))
+	case errors.Is(errOutside, models.ErrUserIDOrTgIDIsRequired):
+		models.WriteResponseError(w, models.NewResponseBadRequestErr("", models.ErrUserIDOrTgIDIsRequired.Error()))
+	case errors.Is(errOutside, models.ErrInvalidUserID):
+		models.WriteResponseError(w, models.NewResponseBadRequestErr("", models.ErrInvalidUserID.Error()))
+	case errors.Is(errOutside, models.ErrInvalidTgID):
+		models.WriteResponseError(w, models.NewResponseBadRequestErr("", models.ErrInvalidTgID.Error()))
+	default:
+		models.WriteResponseError(w, models.NewResponseInternalServerErr("", models.InternalServerErrMessage))
+	}
+}
+
+func (h *Handler) UserIsSubscribed(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	eventID, err := api.GetUUID(r, "event_id")
+	if err != nil {
+		h.handleSubscribeEventError(ctx, w, err)
+		return
+	}
+
+	reqParams, err := models.ParseRequestUserIsSubscribedParams(r.URL.Query())
+	if err != nil {
+		h.handleUserIsSubscribedError(ctx, w, err)
+		return
+	}
+
+	isSubscribed, err := h.app.UserIsSubscribed(ctx, eventID, reqParams)
+	if err != nil {
+		h.handleUserIsSubscribedError(ctx, w, err)
+		return
+	}
+
+	models.WriteJSONResponse(w, models.ResponseUserIsSubscribed{
+		IsSubscribed: isSubscribed,
+	})
 }
 
 func templateBodyYaGPT(folderID, text string) string {

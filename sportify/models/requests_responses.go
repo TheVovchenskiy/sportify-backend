@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strconv"
 
 	"github.com/TheVovchenskiy/sportify-backend/pkg/common"
 	"github.com/TheVovchenskiy/sportify-backend/pkg/mylogger"
@@ -127,6 +129,45 @@ type ResponseSubscribeEvent struct {
 	Capacity    *int        `json:"capacity"`
 	Busy        int         `json:"busy"`
 	Subscribers []uuid.UUID `json:"subscribers_id"`
+}
+
+type RequestUserIsSubscribedParams struct {
+	UserID *uuid.UUID
+	TgID   *int64
+}
+
+var (
+	ErrUserIDOrTgIDIsRequired = errors.New("user_id or tg_id is required")
+	ErrInvalidUserID          = errors.New("invalid user_id")
+	ErrInvalidTgID            = errors.New("invalid tg_id")
+)
+
+func ParseRequestUserIsSubscribedParams(query url.Values) (*RequestUserIsSubscribedParams, error) {
+	var params RequestUserIsSubscribedParams
+	if query.Has("user_id") {
+		userID, err := uuid.Parse(query.Get("user_id"))
+		if err != nil {
+			return nil, fmt.Errorf("%w: %s", ErrInvalidUserID, err.Error())
+		}
+		params.UserID = &userID
+	}
+	if query.Has("tg_id") {
+		tgID, err := strconv.ParseInt(query.Get("tg_id"), 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %s", ErrInvalidTgID, err.Error())
+		}
+		params.TgID = &tgID
+	}
+
+	if params.UserID == nil && params.TgID == nil {
+		return nil, ErrUserIDOrTgIDIsRequired
+	}
+
+	return &params, nil
+}
+
+type ResponseUserIsSubscribed struct {
+	IsSubscribed bool `json:"is_subscribed"`
 }
 
 var (
