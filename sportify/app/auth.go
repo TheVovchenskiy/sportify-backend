@@ -22,7 +22,7 @@ type AuthStorage interface {
 	GetUserFullByUsername(ctx context.Context, username string) (*models.UserFull, error)
 	GetUserFullByTgID(ctx context.Context, tgID int64) (*models.UserFull, error)
 	GetUserFullByID(ctx context.Context, id uuid.UUID) (*models.UserFull, error)
-	CreateUser(ctx context.Context, id uuid.UUID, username, password string, tgUserID *int64) (models.ResponseSuccessLogin, error)
+	CreateUser(ctx context.Context, id uuid.UUID, username string, password *string, tgUserID *int64) (models.ResponseSuccessLogin, error)
 }
 
 var _ AuthStorage = (*db.PostgresStorage)(nil)
@@ -86,7 +86,7 @@ func (a *App) ValidateUsernameAndPassword(username, password string) (string, st
 	return username, password, nil
 }
 
-func (a *App) CreateUser(ctx context.Context, username, password string, tgUserID *int64) (models.ResponseSuccessLogin, error) {
+func (a *App) CreateUser(ctx context.Context, username, password string) (models.ResponseSuccessLogin, error) {
 	isUsernameExists, err := a.authStorage.CheckUsernameExists(ctx, username)
 	if err != nil {
 		return models.ResponseSuccessLogin{}, fmt.Errorf("to check username exists: %w", err)
@@ -100,10 +100,38 @@ func (a *App) CreateUser(ctx context.Context, username, password string, tgUserI
 		return models.ResponseSuccessLogin{}, fmt.Errorf("to hash pass: %w", err)
 	}
 
-	responseSuccessRegister, err := a.authStorage.CreateUser(ctx, uuid.New(), username, hashPass, tgUserID)
+	responseSuccessRegister, err := a.authStorage.CreateUser(ctx, uuid.New(), username, &hashPass, nil)
 	if err != nil {
 		return models.ResponseSuccessLogin{}, fmt.Errorf("to register: %w", err)
 	}
 
 	return responseSuccessRegister, nil
+}
+
+func (a *App) LoginUserFromTg(ctx context.Context, token, username string, tgUserID int64) error {
+	_, err := a.authStorage.GetUserFullByUsername(ctx, username)
+	if err != nil {
+		if errors.Is(err, db.ErrUserNotFound) {
+			_, errInside := a.authStorage.CreateUser(ctx, uuid.New(), username, nil, &tgUserID)
+			if errInside != nil {
+				return fmt.Errorf("to create user: %w", errInside)
+			}
+
+			errInside = a.tokenStorage.Set(ctx, token, username)
+			if errInside != nil {
+				return fmt.Errorf("to set token with not existing user: %w", errInside)
+			}
+
+			return nil
+		}
+
+		return fmt.Errorf("to get user full by username=%s: %w", username, err)
+	}
+
+	err = a.tokenStorage.Set(ctx, token, username)
+	if err != nil {
+		return fmt.Errorf("to set token existing user, username=%s: %w", username, err)
+	}
+
+	return nil
 }

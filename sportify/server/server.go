@@ -35,6 +35,7 @@ func (s *Server) runTgHandler(ctx context.Context, cfg *config.Config, handler a
 		r.Post("/message", handler.TryCreateEvent)
 		r.Put("/events/{id}/subscribers", handler.SubscribeEvent)
 		r.Get("/events/{event_id}/subscribers", handler.UserIsSubscribed)
+		r.Post("/users", handler.LoginUserFromTg)
 	})
 
 	s.serverTg = http.Server{ //nolint:exhaustruct
@@ -102,7 +103,10 @@ func (s *Server) Run(ctx context.Context, configFile []string) error {
 	}
 
 	url := cfg.App.Domain + cfg.App.Port
-	handler := api.NewHandler(app.NewApp(cfg.App.URLPrefixFile, fsStorage, postgresStorage, postgresStorage, logger, botAPI), logger, cfg.App.FolderID, cfg.App.IAMToken, url, cfg.App.APIPrefix)
+	appSportify := app.NewApp(
+		cfg.App.URLPrefixFile, fsStorage, postgresStorage, postgresStorage, mapTokenStorage, logger, botAPI,
+	)
+	handler := api.NewHandler(appSportify, logger, cfg.App.FolderID, cfg.App.IAMToken, url, cfg.App.APIPrefix)
 
 	checkCredFunc := handler.NewCredCheckFunc(ctx)
 	authMiddleware, authHandler := s.prepareAuthProviders(

@@ -9,12 +9,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/TheVovchenskiy/sportify-backend/pkg/common"
-
 	"github.com/TheVovchenskiy/sportify-backend/app/botapi"
 	"github.com/TheVovchenskiy/sportify-backend/app/yookassa"
 	"github.com/TheVovchenskiy/sportify-backend/db"
 	"github.com/TheVovchenskiy/sportify-backend/models"
+	"github.com/TheVovchenskiy/sportify-backend/pkg/common"
 	"github.com/TheVovchenskiy/sportify-backend/pkg/mylogger"
 
 	"github.com/google/uuid"
@@ -66,6 +65,13 @@ type PaymentPayoutStorage interface {
 
 var _ PaymentPayoutStorage = (*db.PostgresPaymentPayoutStorage)(nil)
 
+type TokenStorage interface {
+	GetUsername(ctx context.Context, token string) (string, error)
+	Set(ctx context.Context, token, username string) error
+}
+
+var _ TokenStorage = (*db.MapTokenStorage)(nil)
+
 //go:generate mockgen -source=app.go -destination=mocks/app.go -package=mocks EventStorage
 
 type App struct {
@@ -74,6 +80,7 @@ type App struct {
 	eventStorage         EventStorage
 	paymentPayoutStorage PaymentPayoutStorage
 	authStorage          AuthStorage
+	tokenStorage         TokenStorage
 	yookassaClient       YookassaClient
 	httpClient           *http.Client
 	logger               *mylogger.MyLogger
@@ -85,6 +92,7 @@ func NewApp(
 	fileStorage FileStorage,
 	eventStorage EventStorage,
 	authStorage AuthStorage,
+	tokenStorage TokenStorage,
 	logger *mylogger.MyLogger,
 	botAPI BotAPI,
 	// paymentPayoutStorage PaymentPayoutStorage,
@@ -96,6 +104,7 @@ func NewApp(
 		fileStorage:   fileStorage,
 		authStorage:   authStorage,
 		httpClient:    http.DefaultClient,
+		tokenStorage:  tokenStorage,
 		logger:        logger,
 		botAPI:        botAPI,
 		// paymentPayoutStorage: paymentPayoutStorage,

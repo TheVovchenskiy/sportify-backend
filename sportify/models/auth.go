@@ -10,7 +10,7 @@ type UserFull struct {
 	ID        uuid.UUID
 	TgID      *int64
 	Username  string
-	Password  string
+	Password  *string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

@@ -110,8 +110,8 @@ func (p *PostgresStorage) GetPasswordByUsername(ctx context.Context, username st
 func (p *PostgresStorage) CreateUser(
 	ctx context.Context,
 	id uuid.UUID,
-	username,
-	password string,
+	username string,
+	password *string,
 	tgUserID *int64,
 ) (models.ResponseSuccessLogin, error) {
 	sqlInsert := `INSERT INTO "public".user(id, tg_id, username, password) VALUES($1, $2, $3, $4)`

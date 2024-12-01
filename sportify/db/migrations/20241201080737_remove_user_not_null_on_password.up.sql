@@ -1,0 +1,1 @@
+ALTER TABLE IF EXISTS public."user" ALTER COLUMN password DROP NOT NULL;

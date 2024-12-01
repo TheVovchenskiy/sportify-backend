@@ -101,7 +101,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responseSuccessRegister, err := h.app.CreateUser(ctx, username, password, nil)
+	responseSuccessRegister, err := h.app.CreateUser(ctx, username, password)
 	if err != nil {
 		h.handleRegister(ctx, w, err)
 		return
@@ -147,4 +147,41 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) NewCredCheckFunc(ctx context.Context) provider.CredCheckerFunc {
 	return h.app.NewCredCheckFunc(ctx)
+}
+
+func (h *Handler) handleLoginFromTg(ctx context.Context, w http.ResponseWriter, errOutside error) {
+	h.logger.WithCtx(ctx).Error(errOutside)
+
+	switch {
+	default:
+		models.WriteResponseError(w, models.NewResponseInternalServerErr("", models.InternalServerErrMessage))
+	}
+}
+
+var ErrRequestLoginFromTg = errors.New("не корректный запрос на логин из тг")
+
+func (h *Handler) LoginUserFromTg(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var reqLoginFromTg models.RequestLoginFromTg
+
+	reqBody, err := io.ReadAll(r.Body)
+	if err != nil {
+		h.handleLoginFromTg(ctx, w, err)
+		return
+	}
+
+	err = json.Unmarshal(reqBody, &reqLoginFromTg)
+	if err != nil {
+		err = fmt.Errorf("%w: %w", ErrRequestLoginFromTg, err)
+		h.handleLoginFromTg(ctx, w, err)
+		return
+	}
+
+	err = h.app.LoginUserFromTg(ctx, reqLoginFromTg.Token, reqLoginFromTg.TgUsername, reqLoginFromTg.TgUserID)
+	if err != nil {
+		h.handleLoginFromTg(ctx, w, err)
+	}
+
+	models.WriteJSONResponse(w, "ok")
 }
