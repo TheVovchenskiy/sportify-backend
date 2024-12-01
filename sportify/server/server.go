@@ -94,6 +94,8 @@ func (s *Server) Run(ctx context.Context, configFile []string) error {
 		return fmt.Errorf("to new fs storage: %w", err)
 	}
 
+	mapTokenStorage := db.NewMapTokenStorage(time.Minute * 30)
+
 	botAPI, err := botapi.NewBotAPI(cfg.BotAPI.BaseURL, cfg.BotAPI.Port)
 	if err != nil {
 		return fmt.Errorf("to new bot api: %w", err)
@@ -103,7 +105,12 @@ func (s *Server) Run(ctx context.Context, configFile []string) error {
 	handler := api.NewHandler(app.NewApp(cfg.App.URLPrefixFile, fsStorage, postgresStorage, postgresStorage, logger, botAPI), logger, cfg.App.FolderID, cfg.App.IAMToken, url, cfg.App.APIPrefix)
 
 	checkCredFunc := handler.NewCredCheckFunc(ctx)
-	authMiddleware, authHandler := s.prepareAuthProvider(ctx, cfg.App.AuthSecret, url, checkCredFunc, logger)
+	authMiddleware, authHandler := s.prepareAuthProviders(
+		ctx,
+		cfg.App.AuthSecret, url, cfg.Bot.Token,
+		checkCredFunc, http.DefaultClient, mapTokenStorage, &handler,
+		logger,
+	)
 
 	r := chi.NewRouter()
 	r.Route(cfg.App.APIPrefix, func(r chi.Router) {
@@ -165,10 +172,13 @@ func (s *Server) Run(ctx context.Context, configFile []string) error {
 	return nil
 }
 
-func (s *Server) prepareAuthProvider(
+func (s *Server) prepareAuthProviders(
 	_ context.Context,
-	authSecret, url string,
+	authSecret, url, tgToken string,
 	credCheckerFunc provider.CredCheckerFunc,
+	httpClient *http.Client,
+	storageToken StorageToken,
+	checkHandler sportifymiddleware.CheckHandler,
 	logger *mylogger.MyLogger,
 ) (authmiddleware.Authenticator, http.Handler) {
 	options := auth.Opts{
@@ -188,7 +198,30 @@ func (s *Server) prepareAuthProvider(
 	}
 
 	service := auth.NewService(options)
+
 	service.AddDirectProvider("my", credCheckerFunc)
+
+	tgHandler := provider.TelegramHandler{
+		ProviderName: "telegram",
+		ErrorMsg:     "❌ Произошла ошибка входа, попробуйте еще раз.",
+		SuccessMsg:   "✅ Вы успешно вошли, вернитесь на сайт",
+		Telegram:     provider.NewTelegramAPI(tgToken, httpClient),
+		L:            logger,
+		TokenService: service.TokenService(),
+		AvatarSaver:  nil,
+	}
+
+	go func() {
+		err := tgHandler.Run(context.Background())
+		if err != nil {
+			logger.Errorf("FAIL: to start tg auth provider: %+v", err)
+		}
+	}()
+
+	// add wrapper for rewrite response on Login
+	wrapTgHandler := NewWrapperTgHandler(storageToken, checkHandler, &tgHandler)
+
+	service.AddCustomHandler(wrapTgHandler)
 
 	middlewares := service.Middleware()
 	authRoutes, _ := service.Handlers()

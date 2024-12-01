@@ -1,5 +1,5 @@
 bot:
-  bot_token: "example_bot_token"
+  token: "example_bot_token"
   port: ":8090"
   api_url: "http://localhost:8090/api/v1/message"
 

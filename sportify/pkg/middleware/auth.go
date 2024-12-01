@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/TheVovchenskiy/sportify-backend/models"
+	"github.com/TheVovchenskiy/sportify-backend/pkg/api"
 
 	"github.com/go-pkgz/auth/token"
 )
@@ -30,7 +31,7 @@ type CheckHandler interface {
 	WriteCheckResponse(ctx context.Context, w http.ResponseWriter, userInfo *token.User)
 }
 
-func ConvertLoginResponseToCheck(handler CheckHandler, prev http.Handler) http.Handler {
+func ConvertLoginResponseToCheck(checkHandler CheckHandler, prev http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if strings.Contains(request.URL.Path, "my/login") {
 			ctx := request.Context()
@@ -39,15 +40,7 @@ func ConvertLoginResponseToCheck(handler CheckHandler, prev http.Handler) http.H
 			prev.ServeHTTP(dummyWriter, request)
 
 			if dummyWriter.Code != http.StatusOK {
-				writer.Header().Set("Content-Type", "application/json")
-				writer.WriteHeader(dummyWriter.Code)
-				for key, values := range dummyWriter.Header() {
-					for _, value := range values {
-						writer.Header().Add(key, value)
-					}
-				}
-				writer.Write(dummyWriter.Body.Bytes())
-				return
+				api.WriteFromDummyWriterToWriter(dummyWriter, writer)
 			}
 
 			var userInfo token.User
@@ -59,12 +52,8 @@ func ConvertLoginResponseToCheck(handler CheckHandler, prev http.Handler) http.H
 				return
 			}
 
-			for key, values := range dummyWriter.Header() {
-				for _, value := range values {
-					writer.Header().Add(key, value)
-				}
-			}
-			handler.WriteCheckResponse(ctx, writer, &userInfo)
+			api.WriteHeaderToWriter(dummyWriter.Header(), writer)
+			checkHandler.WriteCheckResponse(ctx, writer, &userInfo)
 		} else {
 			prev.ServeHTTP(writer, request)
 		}
@@ -74,6 +63,11 @@ func ConvertLoginResponseToCheck(handler CheckHandler, prev http.Handler) http.H
 var mapErrReplace = map[string]string{
 	"Unauthorized\n":             "Вы не авторизованы",
 	"incorrect user or password": "не верный логин или пароль",
+
+	// from telegram check token
+	"request is not found":        "произошла какая-то ошибка авторизации, попробуйте снова",
+	"request expired":             "произошла какая-то ошибка авторизации, попробуйте снова",
+	"request is not verified yet": "подтвердите авторизацию в телеграм боте",
 }
 
 func ConvertErrUnknownToOurType(next http.Handler) http.Handler {
