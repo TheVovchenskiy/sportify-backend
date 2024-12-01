@@ -121,5 +121,5 @@ func (p *PostgresStorage) CreateUser(
 		return models.ResponseSuccessLogin{}, fmt.Errorf("to exec: %w", err)
 	}
 
-	return models.ResponseSuccessLogin{UserID: id, Username: username}, nil
+	return models.ResponseSuccessLogin{UserID: id, Username: username, TgUserID: tgUserID}, nil
 }

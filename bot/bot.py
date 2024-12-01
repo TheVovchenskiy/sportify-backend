@@ -88,6 +88,43 @@ async def subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Sends a message with three inline buttons attached."""
+    command: str = update.message.text.split("")
+
+    # tokens as tokens of the command
+    tokens = command.split()
+
+    if len(tokens) > 1:
+        # token as 2nd argument of the command, should be token passed from
+        # t.me/<bot_name>?start=<token>
+        token = tokens[1]
+        user_id = update.message.from_user.id
+        username = update.message.from_user.username
+        # TODO: handle invalid tokens !!!
+        LOGGER.info(
+            "Handling start command with token, ("
+            f"user_id = {user_id}"
+            f"username = {username}"
+        )
+
+        resp = httpx.post(
+            f"http://0.0.0.0:8090/api/v1/users",
+            json={
+                "tg_user_id": user_id,
+                "tg_username": username,
+                "tg_token": token,
+            },
+        )
+        LOGGER.info(f"User creation response: {resp.json()}")
+        if 200 <= resp.status_code < 300:
+            LOGGER.info(f"Successfully authenticated user {user_id}")
+            await update.message.reply_text(f"Здравствуйте, {resp.json()["username"]}!")
+        else:
+            LOGGER.error(f"Failed to authenticate user {user_id}, error: {resp.text}")
+            await update.message.reply_text(
+                "Произошла ошибка при авторизации, попробуйте еще раз"
+            )
+        return
+
     chat_id = update.message.chat_id
     # TODO: add web app info
     keyboard = [

@@ -145,6 +145,49 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	models.WriteJSONResponse(w, responseSuccessRegister)
 }
 
+func (h *Handler) handleTgAuth(ctx context.Context, w http.ResponseWriter, errOutside error) {
+	h.logger.WithCtx(ctx).Error(errOutside)
+
+	switch {
+	// case errors.Is(errOutside, ErrRequestEventCreateSite):
+	// 	models.WriteResponseError(w, models.NewResponseBadRequestErr("", errOutside.Error()))
+	// case errors.Is(errOutside, app.ErrNotValidUsername):
+	// 	models.WriteResponseError(w, models.NewResponseBadRequestErr("", errOutside.Error()))
+	// case errors.Is(errOutside, app.ErrNotValidPassword):
+	// 	models.WriteResponseError(w, models.NewResponseBadRequestErr("", errOutside.Error()))
+	// case errors.Is(errOutside, app.ErrNotUniqueUsername):
+	// 	models.WriteResponseError(w, models.NewResponseBadRequestErr("", errOutside.Error()))
+	default:
+		models.WriteResponseError(w, models.NewResponseInternalServerErr("", models.InternalServerErrMessage))
+	}
+}
+
+func (h *Handler) TgAuth(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	reqBody, err := io.ReadAll(r.Body)
+	if err != nil {
+		h.handleTgAuth(ctx, w, err)
+		return
+	}
+
+	var tgRequestAuth models.TgRequestAuth
+	err = json.Unmarshal(reqBody, &tgRequestAuth)
+	if err != nil {
+		err = fmt.Errorf("%w: %w", ErrRequestRegister, err)
+		h.handleTgAuth(ctx, w, err)
+		return
+	}
+
+	tgResponse, err := h.app.TgAuth(ctx, &tgRequestAuth)
+	if err != nil {
+		h.handleTgAuth(ctx, w, err)
+		return
+	}
+
+	models.WriteJSONResponse(w, tgResponse)
+}
+
 func (h *Handler) NewCredCheckFunc(ctx context.Context) provider.CredCheckerFunc {
 	return h.app.NewCredCheckFunc(ctx)
 }

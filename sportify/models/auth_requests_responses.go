@@ -9,6 +9,19 @@ type RequestLogin struct {
 
 type ResponseSuccessLogin struct {
 	UserID   uuid.UUID `json:"user_id"`
+	TgUserID *int64     `json:"tg_user_id"`
+	Username string    `json:"username"`
+}
+
+type TgRequestAuth struct {
+	TgUserID   int64  `json:"tg_user_id"`
+	TgUsername string `json:"tg_username"`
+	Token      string `json:"token"`
+}
+
+type TgResponseAuth struct {
+	UserID   uuid.UUID `json:"user_id"`
+	TgUserID int64     `json:"tg_user_id"`
 	Username string    `json:"username"`
 }
 
