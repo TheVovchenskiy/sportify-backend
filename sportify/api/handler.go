@@ -56,21 +56,24 @@ type App interface {
 	// Profile block
 
 	GetUserFullByUserID(ctx context.Context, userID uuid.UUID) (*models.UserFull, error)
+	UpdateProfile(ctx context.Context, userID uuid.UUID, reqUpdate models.RequestUpdateProfile) error
 }
 
 var _ App = (*app.App)(nil)
 
 type Handler struct {
-	folderID  string
-	iamToken  string
-	url       string
-	apiPrefix string
-	logger    *mylogger.MyLogger
-	app       App
+	folderID     string
+	iamToken     string
+	domain       string
+	port         string
+	apiPrefix    string
+	logger       *mylogger.MyLogger
+	tokenService *token.Service
+	app          App
 }
 
-func NewHandler(app App, logger *mylogger.MyLogger, folderID, IAMToken, url, apiPrefix string) Handler {
-	return Handler{app: app, logger: logger, folderID: folderID, iamToken: IAMToken, url: url, apiPrefix: apiPrefix}
+func NewHandler(app App, logger *mylogger.MyLogger, folderID, IAMToken, domain, port, apiPrefix string) Handler {
+	return Handler{app: app, logger: logger, folderID: folderID, iamToken: IAMToken, domain: domain, port: port, apiPrefix: apiPrefix}
 }
 
 // Update need for ClaimsUpdater change userID to our
@@ -84,7 +87,8 @@ func (h *Handler) Update(claims token.Claims) token.Claims {
 		return claims
 	}
 
-	claims.User.ID = userFull.ID.String()
+	// TODO may be not work for telegram auth
+	claims.User.ID = "my_" + userFull.ID.String()
 
 	return claims
 }

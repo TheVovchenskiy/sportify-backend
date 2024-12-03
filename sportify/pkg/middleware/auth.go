@@ -40,6 +40,7 @@ func ConvertLoginResponseToCheck(checkHandler CheckHandler, prev http.Handler) h
 
 			if dummyWriter.Code != http.StatusOK {
 				api.WriteFromDummyWriterToWriter(dummyWriter, writer)
+				return
 			}
 
 			var userInfo token.User

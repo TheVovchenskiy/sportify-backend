@@ -106,15 +106,17 @@ func (s *Server) Run(ctx context.Context, configFile []string) error {
 	appSportify := app.NewApp(
 		cfg.App.URLPrefixFile, fsStorage, postgresStorage, postgresStorage, mapTokenStorage, logger, botAPI,
 	)
-	handler := api.NewHandler(appSportify, logger, cfg.App.FolderID, cfg.App.IAMToken, url, cfg.App.APIPrefix)
+	handler := api.NewHandler(appSportify, logger, cfg.App.FolderID, cfg.App.IAMToken, cfg.App.Domain, cfg.App.Port, cfg.App.APIPrefix)
 
 	checkCredFunc := handler.NewCredCheckFunc(ctx)
-	authMiddleware, authHandler := s.prepareAuthProviders(
+	authMiddleware, authHandler, tokenServiceProvider := s.prepareAuthProviders(
 		ctx,
 		cfg.App.AuthSecret, url, cfg.Bot.Token,
 		checkCredFunc, http.DefaultClient, mapTokenStorage, &handler, &handler,
 		logger,
 	)
+
+	handler.AddTokenServiceProvider(tokenServiceProvider)
 
 	r := chi.NewRouter()
 	r.Route(cfg.App.APIPrefix, func(r chi.Router) {
@@ -126,7 +128,7 @@ func (s *Server) Run(ctx context.Context, configFile []string) error {
 		r.Get("/healthcheck", handler.Healthcheck)
 		r.Get("/events", handler.FindEvents)
 		r.Get("/event/{id}", handler.GetEvent)
-		r.Get("/profile/{id}", handler.GetProfile)
+		r.Get("/profiles/{id}", handler.GetProfile)
 		r.With(authMiddleware.Auth).Put("/event/{id}", handler.EditEventSite)
 		r.With(authMiddleware.Auth).Delete("/event/{id}", handler.DeleteEvent)
 		r.With(authMiddleware.Auth).Put("/event/sub/{id}", handler.SubscribeEvent)
@@ -135,6 +137,7 @@ func (s *Server) Run(ctx context.Context, configFile []string) error {
 		r.With(authMiddleware.Auth).Get("/users/{id}/sub_active/events", handler.GetUsersSubActiveEvents)
 		r.With(authMiddleware.Auth).Get("/users/{id}/sub_archive/events", handler.GetUsersSubArchiveEvents)
 		r.With(authMiddleware.Auth).Post("/upload", handler.UploadFile)
+		r.With(authMiddleware.Auth).Put("/profiles/{user_id}", handler.UpdateProfile)
 
 		r.Mount("/auth",
 			sportifymiddleware.ConvertLoginResponseToCheck(
@@ -186,7 +189,7 @@ func (s *Server) prepareAuthProviders(
 	checkHandler sportifymiddleware.CheckHandler,
 	claimsUpdater token.ClaimsUpdater,
 	logger *mylogger.MyLogger,
-) (authmiddleware.Authenticator, http.Handler) {
+) (authmiddleware.Authenticator, http.Handler, *token.Service) {
 	options := auth.Opts{
 		ClaimsUpd: claimsUpdater,
 		SecretReader: token.SecretFunc(func(id string) (string, error) {
@@ -233,7 +236,7 @@ func (s *Server) prepareAuthProviders(
 	middlewares := service.Middleware()
 	authRoutes, _ := service.Handlers()
 
-	return middlewares, authRoutes
+	return middlewares, authRoutes, service.TokenService()
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {

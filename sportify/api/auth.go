@@ -107,7 +107,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	urlReqLogin, err := url.JoinPath("http://", h.url, h.apiPrefix, "/auth/my/login")
+	urlReqLogin, err := url.JoinPath("http://", h.domain+h.port, h.apiPrefix, "/auth/my/login")
 	if err != nil {
 		err = fmt.Errorf("to join path: %w", err)
 		h.handleRegister(ctx, w, err)

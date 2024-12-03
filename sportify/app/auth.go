@@ -18,11 +18,13 @@ import (
 
 type AuthStorage interface {
 	CheckUsernameExists(ctx context.Context, username string) (bool, error)
-	GetPasswordByUsername(ctx context.Context, username string) (string, error)
+	GetPasswordByUsername(ctx context.Context, username string) (*string, error)
 	GetUserFullByUsername(ctx context.Context, username string) (*models.UserFull, error)
 	GetUserFullByTgID(ctx context.Context, tgID int64) (*models.UserFull, error)
 	GetUserFullByID(ctx context.Context, id uuid.UUID) (*models.UserFull, error)
 	CreateUser(ctx context.Context, id uuid.UUID, username string, password *string, tgUserID *int64) (models.ResponseSuccessLogin, error)
+
+	UpdateProfile(ctx context.Context, userID uuid.UUID, reqUpdate models.RequestUpdateProfile) error
 }
 
 var _ AuthStorage = (*db.PostgresStorage)(nil)
@@ -42,7 +44,11 @@ func (a *App) NewCredCheckFunc(ctx context.Context) provider.CredCheckerFunc {
 			return false, fmt.Errorf("get password by username: %w", err)
 		}
 
-		return hashing.ComparePassAndHash(passHash, plainPassword)
+		if passHash == nil {
+			return false, nil
+		}
+
+		return hashing.ComparePassAndHash(*passHash, plainPassword)
 	}
 }
 
