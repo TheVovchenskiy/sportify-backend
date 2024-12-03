@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/TheVovchenskiy/sportify-backend/pkg/common"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/TheVovchenskiy/sportify-backend/models"
 
@@ -12,32 +14,54 @@ import (
 )
 
 func (p *PostgresStorage) GetUserFullByID(ctx context.Context, id uuid.UUID) (*models.UserFull, error) {
-	sqlSelect := `SELECT id, tg_id, username, password, created_at, updated_at FROM "public".user WHERE id = $1;`
+	sqlSelect := `
+		SELECT id, tg_id, username, password, created_at, updated_at, 
+       		first_name, second_name, sport_types, photo_url, description
+		FROM "public".user WHERE id = $1;`
 
 	row := p.pool.QueryRow(ctx, sqlSelect, id)
 
-	var user models.UserFull
+	var (
+		user          models.UserFull
+		rawSportTypes pgtype.Array[string]
+	)
 
-	err := row.Scan(&user.ID, &user.TgID, &user.Username, &user.Password, &user.CreatedAt, &user.UpdatedAt)
+	err := row.Scan(
+		&user.ID, &user.TgID, &user.Username, &user.Password, &user.CreatedAt, &user.UpdatedAt,
+		&user.FirstName, &user.SecondName, &rawSportTypes, &user.PhotoURL, &user.Description,
+	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("%w: %s", ErrUserNotFound, id)
+			return nil, fmt.Errorf("%w: %d", ErrUserNotFound, id)
 		}
 
 		return nil, fmt.Errorf("to scan user: %w", err)
 	}
 
+	user.SportTypes = common.Map(func(item string) models.SportType {
+		return models.SportType(item)
+	}, rawSportTypes.Elements)
+
 	return &user, nil
 }
 
 func (p *PostgresStorage) GetUserFullByTgID(ctx context.Context, tgID int64) (*models.UserFull, error) {
-	sqlSelect := `SELECT id, tg_id, username, password, created_at, updated_at FROM "public".user WHERE tg_id = $1;`
+	sqlSelect := `
+	SELECT id, tg_id, username, password, created_at, updated_at,
+		first_name, second_name, sport_types, photo_url, description
+	FROM "public".user WHERE tg_id = $1;`
 
 	row := p.pool.QueryRow(ctx, sqlSelect, tgID)
 
-	var user models.UserFull
+	var (
+		user          models.UserFull
+		rawSportTypes pgtype.Array[string]
+	)
 
-	err := row.Scan(&user.ID, &user.TgID, &user.Username, &user.Password, &user.CreatedAt, &user.UpdatedAt)
+	err := row.Scan(
+		&user.ID, &user.TgID, &user.Username, &user.Password, &user.CreatedAt, &user.UpdatedAt,
+		&user.FirstName, &user.SecondName, &rawSportTypes, &user.PhotoURL, &user.Description,
+	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("%w: %d", ErrUserNotFound, tgID)
@@ -46,17 +70,30 @@ func (p *PostgresStorage) GetUserFullByTgID(ctx context.Context, tgID int64) (*m
 		return nil, fmt.Errorf("to scan user: %w", err)
 	}
 
+	user.SportTypes = common.Map(func(item string) models.SportType {
+		return models.SportType(item)
+	}, rawSportTypes.Elements)
+
 	return &user, nil
 }
 
 func (p *PostgresStorage) GetUserFullByUsername(ctx context.Context, username string) (*models.UserFull, error) {
-	sqlSelect := `SELECT id, tg_id, username, password, created_at, updated_at FROM "public".user WHERE username = $1;`
+	sqlSelect := `
+	SELECT id, tg_id, username, password, created_at, updated_at,
+		first_name, second_name, sport_types, photo_url, description 
+	FROM "public".user WHERE username = $1;`
 
 	row := p.pool.QueryRow(ctx, sqlSelect, username)
 
-	var user models.UserFull
+	var (
+		user          models.UserFull
+		rawSportTypes pgtype.Array[string]
+	)
 
-	err := row.Scan(&user.ID, &user.TgID, &user.Username, &user.Password, &user.CreatedAt, &user.UpdatedAt)
+	err := row.Scan(
+		&user.ID, &user.TgID, &user.Username, &user.Password, &user.CreatedAt, &user.UpdatedAt,
+		&user.FirstName, &user.SecondName, &rawSportTypes, &user.PhotoURL, &user.Description,
+	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("%w: %s", ErrUserNotFound, username)
@@ -64,6 +101,10 @@ func (p *PostgresStorage) GetUserFullByUsername(ctx context.Context, username st
 
 		return nil, fmt.Errorf("to scan user: %w", err)
 	}
+
+	user.SportTypes = common.Map(func(item string) models.SportType {
+		return models.SportType(item)
+	}, rawSportTypes.Elements)
 
 	return &user, nil
 }

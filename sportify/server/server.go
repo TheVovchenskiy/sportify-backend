@@ -112,7 +112,7 @@ func (s *Server) Run(ctx context.Context, configFile []string) error {
 	authMiddleware, authHandler := s.prepareAuthProviders(
 		ctx,
 		cfg.App.AuthSecret, url, cfg.Bot.Token,
-		checkCredFunc, http.DefaultClient, mapTokenStorage, &handler,
+		checkCredFunc, http.DefaultClient, mapTokenStorage, &handler, &handler,
 		logger,
 	)
 
@@ -126,6 +126,7 @@ func (s *Server) Run(ctx context.Context, configFile []string) error {
 		r.Get("/healthcheck", handler.Healthcheck)
 		r.Get("/events", handler.FindEvents)
 		r.Get("/event/{id}", handler.GetEvent)
+		r.Get("/profile/{id}", handler.GetProfile)
 		r.With(authMiddleware.Auth).Put("/event/{id}", handler.EditEventSite)
 		r.With(authMiddleware.Auth).Delete("/event/{id}", handler.DeleteEvent)
 		r.With(authMiddleware.Auth).Put("/event/sub/{id}", handler.SubscribeEvent)
@@ -183,9 +184,11 @@ func (s *Server) prepareAuthProviders(
 	httpClient *http.Client,
 	storageToken StorageToken,
 	checkHandler sportifymiddleware.CheckHandler,
+	claimsUpdater token.ClaimsUpdater,
 	logger *mylogger.MyLogger,
 ) (authmiddleware.Authenticator, http.Handler) {
 	options := auth.Opts{
+		ClaimsUpd: claimsUpdater,
 		SecretReader: token.SecretFunc(func(id string) (string, error) {
 			// TODO: refresh every day
 			return authSecret, nil

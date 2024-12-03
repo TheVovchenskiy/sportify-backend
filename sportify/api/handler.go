@@ -20,6 +20,7 @@ import (
 
 	"github.com/Masterminds/squirrel"
 	"github.com/go-pkgz/auth/provider"
+	"github.com/go-pkgz/auth/token"
 	"github.com/google/uuid"
 )
 
@@ -51,6 +52,10 @@ type App interface {
 	GetUserFullByUsername(ctx context.Context, username string) (*models.UserFull, error)
 	CreateUser(ctx context.Context, username, password string) (models.ResponseSuccessLogin, error)
 	LoginUserFromTg(ctx context.Context, token, username string, tgUserID int64) error
+
+	// Profile block
+
+	GetUserFullByUserID(ctx context.Context, userID uuid.UUID) (*models.UserFull, error)
 }
 
 var _ App = (*app.App)(nil)
@@ -66,6 +71,22 @@ type Handler struct {
 
 func NewHandler(app App, logger *mylogger.MyLogger, folderID, IAMToken, url, apiPrefix string) Handler {
 	return Handler{app: app, logger: logger, folderID: folderID, iamToken: IAMToken, url: url, apiPrefix: apiPrefix}
+}
+
+// Update need for ClaimsUpdater change userID to our
+func (h *Handler) Update(claims token.Claims) token.Claims {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+
+	userFull, err := h.app.GetUserFullByUsername(ctx, claims.User.Name)
+	if err != nil {
+		h.logger.Errorf("from Update claims to get userFull: %w", err)
+		return claims
+	}
+
+	claims.User.ID = userFull.ID.String()
+
+	return claims
 }
 
 func (h *Handler) Healthcheck(w http.ResponseWriter, _ *http.Request) {
