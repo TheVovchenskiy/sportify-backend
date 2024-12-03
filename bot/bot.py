@@ -88,7 +88,8 @@ async def subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Sends a message with three inline buttons attached."""
-    command: str = update.message.text.split("")
+    command: str = update.message.text
+
 
     # tokens as tokens of the command
     tokens = command.split()

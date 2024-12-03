@@ -45,8 +45,8 @@ class Event:
         ]
 
         if self.hashtags:
-            lines.append("\n")
-            lines.append(" ".join(self.hashtags))
+            lines.append("")
+            lines.append(escape_markdown(" ".join(self.hashtags), 2))
 
         return "\n".join(lines)
 
@@ -70,7 +70,7 @@ class Event:
         ]
 
         date_and_time_data = data.pop("date_and_time")
-        date_and_time = DateTime.from_dict(**date_and_time_data)
+        date_and_time = DateTime.from_dict(date_and_time_data)
 
         return cls(
             creator=creator,
