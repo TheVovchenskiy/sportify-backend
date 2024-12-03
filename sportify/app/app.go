@@ -162,6 +162,8 @@ func (a *App) getBotEvent(ctx context.Context, eventID uuid.UUID) (*models.BotEv
 		return nil, fmt.Errorf("to get event: %w", err)
 	}
 
+	hashtags := GenerateHashtags(&fullEvent.ShortEvent)
+
 	creator, err := a.getBotUser(ctx, fullEvent.CreatorID)
 	if err != nil {
 		return nil, fmt.Errorf("to get creator: %w", err)
@@ -178,7 +180,7 @@ func (a *App) getBotEvent(ctx context.Context, eventID uuid.UUID) (*models.BotEv
 		subscribers = append(subscribers, subscriber)
 	}
 
-	return fullEvent.ToBotEvent(creator, subscribers), nil
+	return fullEvent.ToBotEvent(creator, subscribers, &hashtags), nil
 }
 
 func (a *App) onEventUpdate(ctx context.Context, eventID uuid.UUID) error {

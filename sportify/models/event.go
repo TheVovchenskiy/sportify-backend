@@ -46,7 +46,7 @@ func NewFullEventSite(eventID uuid.UUID, userID uuid.UUID, eventCreteSite *Event
 	}
 }
 
-func (e *FullEvent) ToBotEvent(creator *BotUser, subscribers []*BotUser) *BotEvent {
+func (e *FullEvent) ToBotEvent(creator *BotUser, subscribers []*BotUser, hashtags *[]string) *BotEvent {
 	subs := make([]BotUser, 0)
 	for _, sub := range subscribers {
 		subs = append(subs, *sub)
@@ -67,6 +67,7 @@ func (e *FullEvent) ToBotEvent(creator *BotUser, subscribers []*BotUser) *BotEve
 		URLPreview:  e.URLPreview,
 		Latitude:    e.Latitude,
 		Longitude:   e.Longitude,
+		Hashtags:    hashtags,
 	}
 }
 

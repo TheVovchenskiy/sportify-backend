@@ -21,8 +21,9 @@ type BotEvent struct {
 	Busy        int         `json:"busy"`
 	Subscribers []BotUser   `json:"subscribers"`
 	URLPreview  string      `json:"url_preview"`
-	Latitude    *string     `json:"latitude"`
-	Longitude   *string     `json:"longitude"`
+	Latitude    *string     `json:"latitude,omitempty"`
+	Longitude   *string     `json:"longitude,omitempty"`
+	Hashtags    *[]string   `json:"hashtags,omitempty"`
 }
 
 type EventCreatedBotRequest struct {

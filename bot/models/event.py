@@ -24,6 +24,7 @@ class Event:
     price: int | None = None
     latitude: str | None = None
     longitude: str | None = None
+    hashtags: list[str] | None = None
 
     def __str__(self) -> str:
         lines = [
@@ -31,15 +32,7 @@ class Event:
             f"Автор: {self.creator}",
             f"Вид спорта: {get_sport_type_ru(self.sport_type)}",
             escape_markdown(f"Адрес: {self.address}", 2),
-            escape_markdown(f"Дата: {self.date_and_time.date}", 2),
-            escape_markdown(
-                (
-                    f"Время: {self.date_and_time.start_time} - {self.date_and_time.end_time}"
-                    if self.date_and_time.end_time
-                    else f"Время: {self.date_and_time.start_time}"
-                ),
-                2,
-            ),
+            escape_markdown(str(self.date_and_time), 2),
             f"Цена: {self.price if not self.is_free else "БЕСПЛАТНО"}",
             (
                 f"Уровень игры: [{', '.join(f"`{escape_markdown(en_to_ru_game_level[GameLevel(game_level)], 2) }`" for game_level in self.game_levels)}]"
@@ -50,6 +43,10 @@ class Event:
             f"Занято мест: {self.busy}",
             (f"Участники:\n{self.__str_subscribers()}" if self.subscribers else ""),
         ]
+
+        if self.hashtags:
+            lines.append("\n")
+            lines.append(" ".join(self.hashtags))
 
         return "\n".join(lines)
 
@@ -73,7 +70,7 @@ class Event:
         ]
 
         date_and_time_data = data.pop("date_and_time")
-        date_and_time = DateTime(**date_and_time_data)
+        date_and_time = DateTime.from_dict(**date_and_time_data)
 
         return cls(
             creator=creator,

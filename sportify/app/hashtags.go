@@ -15,9 +15,7 @@ func replaceDashAndSpaceToUnderscore(s string) string {
 
 const formatHashtag = "#%s"
 
-func GenerateHashtags(event *models.ShortEvent, sep string) string {
-	var hashtags []string
-
+func GenerateHashtags(event *models.ShortEvent) (hashtags []string) {
 	hashtags = append(hashtags, event.DateAndTime.Date.Format("#дата_02_01_2006"))
 
 	if sportType, ok := models.EnToRuSportType(event.SportType); ok {
@@ -36,5 +34,5 @@ func GenerateHashtags(event *models.ShortEvent, sep string) string {
 		hashtags = append(hashtags, "#платно")
 	}
 
-	return strings.Join(hashtags, sep)
+	return hashtags
 }

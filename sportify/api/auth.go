@@ -162,31 +162,31 @@ func (h *Handler) handleTgAuth(ctx context.Context, w http.ResponseWriter, errOu
 	}
 }
 
-func (h *Handler) TgAuth(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
+// func (h *Handler) TgAuth(w http.ResponseWriter, r *http.Request) {
+// 	ctx := r.Context()
 
-	reqBody, err := io.ReadAll(r.Body)
-	if err != nil {
-		h.handleTgAuth(ctx, w, err)
-		return
-	}
+// 	reqBody, err := io.ReadAll(r.Body)
+// 	if err != nil {
+// 		h.handleTgAuth(ctx, w, err)
+// 		return
+// 	}
 
-	var tgRequestAuth models.TgRequestAuth
-	err = json.Unmarshal(reqBody, &tgRequestAuth)
-	if err != nil {
-		err = fmt.Errorf("%w: %w", ErrRequestRegister, err)
-		h.handleTgAuth(ctx, w, err)
-		return
-	}
+// 	var tgRequestAuth models.TgRequestAuth
+// 	err = json.Unmarshal(reqBody, &tgRequestAuth)
+// 	if err != nil {
+// 		err = fmt.Errorf("%w: %w", ErrRequestRegister, err)
+// 		h.handleTgAuth(ctx, w, err)
+// 		return
+// 	}
 
-	tgResponse, err := h.app.TgAuth(ctx, &tgRequestAuth)
-	if err != nil {
-		h.handleTgAuth(ctx, w, err)
-		return
-	}
+// 	tgResponse, err := h.app.TgAuth(ctx, &tgRequestAuth)
+// 	if err != nil {
+// 		h.handleTgAuth(ctx, w, err)
+// 		return
+// 	}
 
-	models.WriteJSONResponse(w, tgResponse)
-}
+// 	models.WriteJSONResponse(w, tgResponse)
+// }
 
 func (h *Handler) NewCredCheckFunc(ctx context.Context) provider.CredCheckerFunc {
 	return h.app.NewCredCheckFunc(ctx)
