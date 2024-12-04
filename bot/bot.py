@@ -90,7 +90,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Sends a message with three inline buttons attached."""
     command: str = update.message.text
 
-
     # tokens as tokens of the command
     tokens = command.split()
 
@@ -115,10 +114,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                 "tg_token": token,
             },
         )
-        LOGGER.info(f"User creation response: {resp.json()}")
+        LOGGER.info(f"User creation response status code: {resp.status_code}")
         if 200 <= resp.status_code < 300:
             LOGGER.info(f"Successfully authenticated user {user_id}")
-            await update.message.reply_text(f"Здравствуйте, {resp.json()["username"]}!")
+            await update.message.reply_text(f"Рады видеть Вас!")
         else:
             LOGGER.error(f"Failed to authenticate user {user_id}, error: {resp.text}")
             await update.message.reply_text(
