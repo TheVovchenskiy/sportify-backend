@@ -120,7 +120,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                     "message": {
                         "chat": {
                             "id": chat_id,
-                            "first_name": first_name,
+                            "first_name": username,
                             "type": chat_type,
                         },
                         "text": command,
