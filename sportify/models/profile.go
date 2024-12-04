@@ -9,6 +9,7 @@ import (
 )
 
 type ProfileInfo struct {
+	UserID      string      `json:"user_id"`
 	Username    string      `json:"username"`
 	FirstName   *string     `json:"first_name"`
 	SecondName  *string     `json:"second_name"`
@@ -37,6 +38,7 @@ func MapUserFullToProfileAPI(userIDFromToken uuid.UUID, userFull *UserFull) *Pro
 		IsMyProfile:  userIDFromToken == userFull.ID,
 		IsTgOnlyUser: userFull.TgID != nil,
 		ProfileInfo: ProfileInfo{
+			UserID:      userFull.ID.String(),
 			Username:    userFull.Username,
 			FirstName:   userFull.FirstName,
 			SecondName:  userFull.SecondName,
