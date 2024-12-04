@@ -31,8 +31,8 @@ func (h *Handler) handleCheck(ctx context.Context, w http.ResponseWriter, errOut
 	}
 }
 
-func (h *Handler) WriteCheckResponse(ctx context.Context, w http.ResponseWriter, userInfo *token.User) {
-	userFull, err := h.app.GetUserFullByUsername(ctx, userInfo.Name)
+func (h *Handler) WriteCheckResponse(ctx context.Context, w http.ResponseWriter, r *http.Request, username string) {
+	userFull, err := h.app.GetUserFullByUsername(ctx, username)
 	if err != nil {
 		err = fmt.Errorf("to get user full by name: %w", err)
 		h.handleCheck(ctx, w, err)
@@ -41,7 +41,7 @@ func (h *Handler) WriteCheckResponse(ctx context.Context, w http.ResponseWriter,
 
 	var responseCheck models.ResponseSuccessLogin
 
-	responseCheck.Username = userInfo.Name
+	responseCheck.Username = username
 	responseCheck.UserID = userFull.ID
 
 	models.WriteJSONResponse(w, responseCheck)
@@ -57,7 +57,7 @@ func (h *Handler) Check(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.WriteCheckResponse(ctx, w, &userInfo)
+	h.WriteCheckResponse(ctx, w, r, userInfo.Name)
 }
 
 func (h *Handler) handleRegister(ctx context.Context, w http.ResponseWriter, errOutside error) {
@@ -109,7 +109,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	urlReqLogin, err := url.JoinPath("http://", h.url, h.apiPrefix, "/auth/my/login")
+	urlReqLogin, err := url.JoinPath("http://", h.domain+h.port, h.apiPrefix, "/auth/my/login")
 	if err != nil {
 		err = fmt.Errorf("to join path: %w", err)
 		h.handleRegister(ctx, w, err)

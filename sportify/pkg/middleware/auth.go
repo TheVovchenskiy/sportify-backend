@@ -28,19 +28,19 @@ func PostOnlyRestriction(url string, next http.Handler) http.Handler {
 }
 
 type CheckHandler interface {
-	WriteCheckResponse(ctx context.Context, w http.ResponseWriter, userInfo *token.User)
+	WriteCheckResponse(ctx context.Context, w http.ResponseWriter, r *http.Request, username string)
 }
 
 func ConvertLoginResponseToCheck(checkHandler CheckHandler, prev http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if strings.Contains(request.URL.Path, "my/login") {
-			ctx := request.Context()
 			dummyWriter := httptest.NewRecorder()
 
 			prev.ServeHTTP(dummyWriter, request)
 
 			if dummyWriter.Code != http.StatusOK {
 				api.WriteFromDummyWriterToWriter(dummyWriter, writer)
+				return
 			}
 
 			var userInfo token.User
@@ -53,7 +53,7 @@ func ConvertLoginResponseToCheck(checkHandler CheckHandler, prev http.Handler) h
 			}
 
 			api.WriteHeaderToWriter(dummyWriter.Header(), writer)
-			checkHandler.WriteCheckResponse(ctx, writer, &userInfo)
+			checkHandler.WriteCheckResponse(request.Context(), writer, request, userInfo.Name)
 		} else {
 			prev.ServeHTTP(writer, request)
 		}

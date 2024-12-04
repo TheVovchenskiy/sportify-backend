@@ -21,6 +21,7 @@ import (
 
 	"github.com/Masterminds/squirrel"
 	"github.com/go-pkgz/auth/provider"
+	"github.com/go-pkgz/auth/token"
 	"github.com/google/uuid"
 )
 
@@ -52,30 +53,55 @@ type App interface {
 	GetUserFullByUsername(ctx context.Context, username string) (*models.UserFull, error)
 	CreateUser(ctx context.Context, username, password string) (models.ResponseSuccessLogin, error)
 	LoginUserFromTg(ctx context.Context, tgRequestAuth *models.TgRequestAuth) error
+
+	// Profile block
+
+	GetUserFullByUserID(ctx context.Context, userID uuid.UUID) (*models.UserFull, error)
+	UpdateProfile(ctx context.Context, userID uuid.UUID, reqUpdate models.RequestUpdateProfile) error
 }
 
 var _ App = (*app.App)(nil)
 
 type Handler struct {
-	folderID  string
-	iamToken  string
-	url       string
-	apiPrefix string
-	logger    *mylogger.MyLogger
-	telegram  *telegramapi.TelegramAPIDummy
-	app       App
+	folderID     string
+	iamToken     string
+	domain       string
+	port         string
+	apiPrefix    string
+	logger       *mylogger.MyLogger
+	telegram     *telegramapi.TelegramAPIDummy
+	tokenService *token.Service
+	app          App
 }
 
-func NewHandler(app App, logger *mylogger.MyLogger, folderID, IAMToken, url, apiPrefix string, telegram *telegramapi.TelegramAPIDummy) Handler {
+func NewHandler(app App, logger *mylogger.MyLogger, folderID, IAMToken, domain, port, apiPrefix string, telegram *telegramapi.TelegramAPIDummy) Handler {
 	return Handler{
 		app:       app,
 		logger:    logger,
 		folderID:  folderID,
 		iamToken:  IAMToken,
-		url:       url,
+		domain:    domain,
+		port:      port,
 		apiPrefix: apiPrefix,
 		telegram:  telegram,
 	}
+}
+
+// Update need for ClaimsUpdater change userID to our
+func (h *Handler) Update(claims token.Claims) token.Claims {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+
+	userFull, err := h.app.GetUserFullByUsername(ctx, claims.User.Name)
+	if err != nil {
+		h.logger.Errorf("from Update claims to get userFull: %w", err)
+		return claims
+	}
+
+	// TODO may be not work for telegram auth
+	claims.User.ID = "my_" + userFull.ID.String()
+
+	return claims
 }
 
 func (h *Handler) Healthcheck(w http.ResponseWriter, _ *http.Request) {
