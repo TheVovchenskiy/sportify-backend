@@ -56,6 +56,26 @@ async def subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         LOGGER.info(f"No event found for message {query.message.id}")
         return
 
+    user_id = update.message.from_user.id
+    username = update.message.from_user.username
+    LOGGER.info(
+        "Handling start create tg user if needed, ("
+        f"user_id = {user_id}"
+        f"username = {username}"
+        ")"
+    )
+    resp = httpx.post(
+        f"http://0.0.0.0:8090/api/v1/raw/users",
+        json={
+            "tg_user_id": user_id,
+            "tg_username": username,
+        },
+    )
+
+    if resp.status_code != 200:
+        LOGGER.error(f"Failed to create user: {resp.text}")
+        return
+
     is_subscribed_response = httpx.get(
         f"http://0.0.0.0:8090/api/v1/events/{target_event_id}/subscribers?tg_id={query.from_user.id}",
     )
@@ -98,15 +118,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         # t.me/<bot_name>?start=<token>
         token = tokens[1]
         user_id = update.message.from_user.id
-        chat_id = update.message.chat_id
         username = update.message.from_user.username
-        first_name = update.message.from_user.first_name
+        chat_id = update.message.chat_id
+        # first_name = update.message.from_user.first_name
         chat_type = update.message.chat.type
         # TODO: handle invalid tokens !!!
         LOGGER.info(
             "Handling start command with token, ("
             f"user_id = {user_id}"
             f"username = {username}"
+            ")"
         )
 
         resp = httpx.post(
@@ -363,7 +384,7 @@ def main() -> None:
     asyncio.set_event_loop(loop)
 
     bot_application.add_handler(CommandHandler("start", start))
-    bot_application.add_handler(CommandHandler("test", test))
+    # bot_application.add_handler(CommandHandler("test", test))
     bot_application.add_handler(CallbackQueryHandler(subscribe))
     bot_application.add_handler(CommandHandler("help", help_command))
 

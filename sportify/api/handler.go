@@ -53,7 +53,7 @@ type App interface {
 	GetUserFullByUsername(ctx context.Context, username string) (*models.UserFull, error)
 	CreateUser(ctx context.Context, username, password string) (models.ResponseSuccessLogin, error)
 	LoginUserFromTg(ctx context.Context, tgRequestAuth *models.TgRequestAuth) error
-
+	CreateTgUserIfNeeded(ctx context.Context, tgUsername string, tgUserID int64) error
 	// Profile block
 
 	GetUserFullByUserID(ctx context.Context, userID uuid.UUID) (*models.UserFull, error)

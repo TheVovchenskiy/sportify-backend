@@ -141,3 +141,21 @@ func (a *App) LoginUserFromTg(ctx context.Context, tgRequestAuth *models.TgReque
 
 	return nil
 }
+
+func (a *App) CreateTgUserIfNeeded(ctx context.Context, tgUsername string, tgUserID int64) error {
+	_, err := a.authStorage.GetUserFullByTgID(ctx, tgUserID)
+	if err != nil {
+		if errors.Is(err, db.ErrUserNotFound) {
+			_, errInside := a.authStorage.CreateUser(ctx, uuid.New(), tgUsername, nil, &tgUserID)
+			if errInside != nil {
+				return fmt.Errorf("to create user: %w", errInside)
+			}
+
+			return nil
+		}
+
+		return fmt.Errorf("to get user full by tg_id=%d: %w", tgUserID, err)
+	}
+
+	return nil
+}

@@ -241,3 +241,29 @@ func (h *Handler) LoginUserFromTg(w http.ResponseWriter, r *http.Request) {
 
 	models.WriteJSONResponse(w, "ok")
 }
+
+func (h *Handler) CreateTgUser(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var tgReqAuth models.CreateTgUserRequest
+
+	reqBody, err := io.ReadAll(r.Body)
+	if err != nil {
+		h.handleLoginFromTg(ctx, w, err)
+		return
+	}
+
+	err = json.Unmarshal(reqBody, &tgReqAuth)
+	if err != nil {
+		err = fmt.Errorf("%w: %w", ErrRequestLoginFromTg, err)
+		h.handleLoginFromTg(ctx, w, err)
+		return
+	}
+
+	err = h.app.CreateTgUserIfNeeded(ctx, tgReqAuth.TgUsername, tgReqAuth.TgUserID)
+	if err != nil {
+		h.handleLoginFromTg(ctx, w, err)
+	}
+
+	models.WriteJSONResponse(w, "ok")
+}

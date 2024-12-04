@@ -41,6 +41,11 @@ type TgRequestAuth struct {
 	Token      string   `json:"token"`
 }
 
+type CreateTgUserRequest struct {
+	TgUserID   int64  `json:"tg_user_id"`
+	TgUsername string `json:"tg_username"`
+}
+
 // type TgResponseAuth struct {
 // 	UserID   uuid.UUID `json:"user_id"`
 // 	TgUserID int64     `json:"tg_user_id"`
