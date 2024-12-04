@@ -98,7 +98,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         # t.me/<bot_name>?start=<token>
         token = tokens[1]
         user_id = update.message.from_user.id
+        chat_id = update.message.chat_id
         username = update.message.from_user.username
+        first_name = update.message.from_user.first_name
+        chat_type = update.message.chat.type
         # TODO: handle invalid tokens !!!
         LOGGER.info(
             "Handling start command with token, ("
@@ -111,7 +114,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             json={
                 "tg_user_id": user_id,
                 "tg_username": username,
-                "tg_token": token,
+                "token": token,
+                "tg_update": {
+                    "update_id": update.update_id,
+                    "message": {
+                        "chat": {
+                            "id": chat_id,
+                            "first_name": first_name,
+                            "type": chat_type,
+                        },
+                        "text": command,
+                    },
+                },
             },
         )
         LOGGER.info(f"User creation response status code: {resp.status_code}")
