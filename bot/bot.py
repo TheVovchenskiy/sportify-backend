@@ -131,11 +131,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         LOGGER.info(f"User creation response status code: {resp.status_code}")
         if 200 <= resp.status_code < 300:
             LOGGER.info(f"Successfully authenticated user {user_id}")
-            await update.message.reply_text(f"Рады видеть Вас!")
+            await update.message.reply_text(
+                f"✅ Вы успешно вошли, вернитесь пожалуйста обратно на сайт"
+            )
         else:
             LOGGER.error(f"Failed to authenticate user {user_id}, error: {resp.text}")
             await update.message.reply_text(
-                "Произошла ошибка при авторизации, попробуйте еще раз"
+                "❌ Произошла ошибка при авторизации, попробуйте еще раз"
             )
         return
 
