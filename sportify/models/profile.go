@@ -8,16 +8,20 @@ import (
 	"github.com/google/uuid"
 )
 
+type ProfileInfo struct {
+	Username    string      `json:"username"`
+	FirstName   *string     `json:"first_name"`
+	SecondName  *string     `json:"second_name"`
+	PhotoURL    *string     `json:"photo_url"`
+	Description *string     `json:"description"`
+	TgURL       *string     `json:"tg_url"`
+	SportTypes  []SportType `json:"sport_types"`
+}
+
 type ProfileAPI struct {
 	IsMyProfile  bool        `json:"isMyProfile"`
 	IsTgOnlyUser bool        `json:"isTgOnlyUser"`
-	Username     string      `json:"username"`
-	FirstName    *string     `json:"first_name"`
-	SecondName   *string     `json:"second_name"`
-	PhotoURL     *string     `json:"photo_url"`
-	Description  *string     `json:"description"`
-	TgURL        *string     `json:"tg_url"`
-	SportTypes   []SportType `json:"sport_types"`
+	ProfileInfo  ProfileInfo `json:"profile_info"`
 }
 
 func mapTgURL(tgUserID *int64, tgUsername string) *string {
@@ -32,13 +36,15 @@ func MapUserFullToProfileAPI(userIDFromToken uuid.UUID, userFull *UserFull) *Pro
 	return &ProfileAPI{
 		IsMyProfile:  userIDFromToken == userFull.ID,
 		IsTgOnlyUser: userFull.TgID != nil,
-		Username:     userFull.Username,
-		FirstName:    userFull.FirstName,
-		SecondName:   userFull.SecondName,
-		PhotoURL:     userFull.PhotoURL,
-		Description:  userFull.Description,
-		TgURL:        mapTgURL(userFull.TgID, userFull.Username),
-		SportTypes:   userFull.SportTypes,
+		ProfileInfo: ProfileInfo{
+			Username:    userFull.Username,
+			FirstName:   userFull.FirstName,
+			SecondName:  userFull.SecondName,
+			PhotoURL:    userFull.PhotoURL,
+			Description: userFull.Description,
+			TgURL:       mapTgURL(userFull.TgID, userFull.Username),
+			SportTypes:  userFull.SportTypes,
+		},
 	}
 }
 
