@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/TheVovchenskiy/sportify-backend/app"
@@ -233,7 +234,7 @@ func (h *Handler) LoginUserFromTg(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = h.telegram.GetResult(tgReqAuth.TgUpdate.Message.Chat.ID)
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "Вы успешно вошли, вернитесь на сайт") {
 		h.handleLoginFromTg(ctx, w, err)
 		return
 	}
