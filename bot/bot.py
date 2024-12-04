@@ -76,6 +76,13 @@ async def subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         LOGGER.error(f"Failed to create user: {resp.text}")
         return
 
+    LOGGER.info(
+        "Creating tg user if needed successful, ("
+        f"user_id = {user_id}"
+        f"username = {username}"
+        ")"
+    )
+
     is_subscribed_response = httpx.get(
         f"http://0.0.0.0:8090/api/v1/events/{target_event_id}/subscribers?tg_id={query.from_user.id}",
     )
