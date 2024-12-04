@@ -13,7 +13,6 @@ import (
 	"github.com/TheVovchenskiy/sportify-backend/pkg/middleware"
 
 	"github.com/go-pkgz/auth/provider"
-	"github.com/go-pkgz/auth/token"
 )
 
 type StorageToken interface {
@@ -68,10 +67,6 @@ func (wth *WrapperTgHandler) LoginHandler(writer http.ResponseWriter, request *h
 		return
 	}
 
-	userInfo := token.User{
-		Name: username,
-	}
-
 	api.WriteHeaderToWriter(dummyWriter.Header(), writer)
-	wth.checkHandler.WriteCheckResponse(request.Context(), writer, &userInfo)
+	wth.checkHandler.WriteCheckResponse(request.Context(), writer, request, username)
 }
