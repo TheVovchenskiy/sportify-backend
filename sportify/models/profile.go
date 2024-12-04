@@ -54,8 +54,8 @@ type RequestUpdateProfile struct {
 
 func (r *RequestUpdateProfile) Valid() error {
 	r.FirstName = strings.TrimSpace(r.FirstName)
-	r.SecondName = strings.TrimSpace(r.FirstName)
-	r.Description = strings.TrimSpace(r.FirstName)
+	r.SecondName = strings.TrimSpace(r.SecondName)
+	r.Description = strings.TrimSpace(r.Description)
 
 	if len(r.FirstName) > 256 {
 		return fmt.Errorf("имя должно быть короче 256 символов")
