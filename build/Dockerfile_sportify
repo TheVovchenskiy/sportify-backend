@@ -13,6 +13,7 @@ COPY sportify/api api
 COPY sportify/app app
 COPY sportify/db db
 COPY sportify/server server
+COPY sportify/vendor vendor
 COPY sportify/go.mod go.mod
 COPY sportify/go.sum go.sum
 
