@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/TheVovchenskiy/sportify-backend/app"
 	"github.com/TheVovchenskiy/sportify-backend/db"
@@ -206,7 +207,7 @@ var ErrRequestLoginFromTg = errors.New("не корректный запрос �
 func (h *Handler) LoginUserFromTg(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	var reqLoginFromTg models.RequestLoginFromTg
+	var tgReqAuth models.TgRequestAuth
 
 	reqBody, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -214,16 +215,27 @@ func (h *Handler) LoginUserFromTg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = json.Unmarshal(reqBody, &reqLoginFromTg)
+	err = json.Unmarshal(reqBody, &tgReqAuth)
 	if err != nil {
 		err = fmt.Errorf("%w: %w", ErrRequestLoginFromTg, err)
 		h.handleLoginFromTg(ctx, w, err)
 		return
 	}
 
-	err = h.app.LoginUserFromTg(ctx, reqLoginFromTg.Token, reqLoginFromTg.TgUsername, reqLoginFromTg.TgUserID)
+	h.telegram.AddUpdate(&models.TgUpdateWrapper{
+		TgUpdate:       tgReqAuth.TgUpdate,
+		ExpirationTime: time.Now().Add(time.Second * 10),
+	})
+
+	err = h.app.LoginUserFromTg(ctx, &tgReqAuth)
 	if err != nil {
 		h.handleLoginFromTg(ctx, w, err)
+	}
+
+	err = h.telegram.GetResult(tgReqAuth.TgUpdate.Message.Chat.ID)
+	if err != nil {
+		h.handleLoginFromTg(ctx, w, err)
+		return
 	}
 
 	models.WriteJSONResponse(w, "ok")

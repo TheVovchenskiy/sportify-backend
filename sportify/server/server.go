@@ -11,6 +11,7 @@ import (
 	"github.com/TheVovchenskiy/sportify-backend/app"
 	"github.com/TheVovchenskiy/sportify-backend/app/botapi"
 	"github.com/TheVovchenskiy/sportify-backend/app/config"
+	"github.com/TheVovchenskiy/sportify-backend/app/telegramapi"
 	"github.com/TheVovchenskiy/sportify-backend/db"
 	sportifymiddleware "github.com/TheVovchenskiy/sportify-backend/pkg/middleware"
 	"github.com/TheVovchenskiy/sportify-backend/pkg/mylogger"
@@ -106,14 +107,15 @@ func (s *Server) Run(ctx context.Context, configFile []string) error {
 	appSportify := app.NewApp(
 		cfg.App.URLPrefixFile, fsStorage, postgresStorage, postgresStorage, mapTokenStorage, logger, botAPI,
 	)
-	handler := api.NewHandler(appSportify, logger, cfg.App.FolderID, cfg.App.IAMToken, url, cfg.App.APIPrefix)
 
+	tgAPI := telegramapi.NewTelegramAPIDummy()
+	handler := api.NewHandler(appSportify, logger, cfg.App.FolderID, cfg.App.IAMToken, url, cfg.App.APIPrefix, tgAPI)
 	checkCredFunc := handler.NewCredCheckFunc(ctx)
 	authMiddleware, authHandler := s.prepareAuthProviders(
 		ctx,
 		cfg.App.AuthSecret, url, cfg.Bot.Token,
 		checkCredFunc, http.DefaultClient, mapTokenStorage, &handler,
-		logger,
+		logger, tgAPI,
 	)
 
 	r := chi.NewRouter()
@@ -184,6 +186,7 @@ func (s *Server) prepareAuthProviders(
 	storageToken StorageToken,
 	checkHandler sportifymiddleware.CheckHandler,
 	logger *mylogger.MyLogger,
+	tgAPI provider.TelegramAPI,
 ) (authmiddleware.Authenticator, http.Handler) {
 	options := auth.Opts{
 		SecretReader: token.SecretFunc(func(id string) (string, error) {
@@ -205,11 +208,13 @@ func (s *Server) prepareAuthProviders(
 
 	service.AddDirectProvider("my", credCheckerFunc)
 
+	// tgAPI := NewTelegramAPIDummy()
+
 	tgHandler := provider.TelegramHandler{
 		ProviderName: "telegram",
 		ErrorMsg:     "❌ Произошла ошибка входа, попробуйте еще раз.",
 		SuccessMsg:   "✅ Вы успешно вошли, вернитесь на сайт",
-		Telegram:     provider.NewTelegramAPI(tgToken, httpClient),
+		Telegram:     tgAPI,
 		L:            logger,
 		TokenService: service.TokenService(),
 		AvatarSaver:  nil,

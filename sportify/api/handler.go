@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/TheVovchenskiy/sportify-backend/app"
+	"github.com/TheVovchenskiy/sportify-backend/app/telegramapi"
 	"github.com/TheVovchenskiy/sportify-backend/db"
 	"github.com/TheVovchenskiy/sportify-backend/models"
 	"github.com/TheVovchenskiy/sportify-backend/pkg/api"
@@ -50,7 +51,7 @@ type App interface {
 	ValidateUsernameAndPassword(username, password string) (string, string, error)
 	GetUserFullByUsername(ctx context.Context, username string) (*models.UserFull, error)
 	CreateUser(ctx context.Context, username, password string) (models.ResponseSuccessLogin, error)
-	LoginUserFromTg(ctx context.Context, token, username string, tgUserID int64) error
+	LoginUserFromTg(ctx context.Context, tgRequestAuth *models.TgRequestAuth) error
 }
 
 var _ App = (*app.App)(nil)
@@ -61,11 +62,20 @@ type Handler struct {
 	url       string
 	apiPrefix string
 	logger    *mylogger.MyLogger
+	telegram  *telegramapi.TelegramAPIDummy
 	app       App
 }
 
-func NewHandler(app App, logger *mylogger.MyLogger, folderID, IAMToken, url, apiPrefix string) Handler {
-	return Handler{app: app, logger: logger, folderID: folderID, iamToken: IAMToken, url: url, apiPrefix: apiPrefix}
+func NewHandler(app App, logger *mylogger.MyLogger, folderID, IAMToken, url, apiPrefix string, telegram *telegramapi.TelegramAPIDummy) Handler {
+	return Handler{
+		app:       app,
+		logger:    logger,
+		folderID:  folderID,
+		iamToken:  IAMToken,
+		url:       url,
+		apiPrefix: apiPrefix,
+		telegram:  telegram,
+	}
 }
 
 func (h *Handler) Healthcheck(w http.ResponseWriter, _ *http.Request) {

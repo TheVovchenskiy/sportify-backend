@@ -108,16 +108,16 @@ func (a *App) CreateUser(ctx context.Context, username, password string) (models
 	return responseSuccessRegister, nil
 }
 
-func (a *App) LoginUserFromTg(ctx context.Context, token, username string, tgUserID int64) error {
-	_, err := a.authStorage.GetUserFullByUsername(ctx, username)
+func (a *App) LoginUserFromTg(ctx context.Context, tgRequestAuth *models.TgRequestAuth) error {
+	_, err := a.authStorage.GetUserFullByUsername(ctx, tgRequestAuth.TgUsername)
 	if err != nil {
 		if errors.Is(err, db.ErrUserNotFound) {
-			_, errInside := a.authStorage.CreateUser(ctx, uuid.New(), username, nil, &tgUserID)
+			_, errInside := a.authStorage.CreateUser(ctx, uuid.New(), tgRequestAuth.TgUsername, nil, &tgRequestAuth.TgUserID)
 			if errInside != nil {
 				return fmt.Errorf("to create user: %w", errInside)
 			}
 
-			errInside = a.tokenStorage.Set(ctx, token, username)
+			errInside = a.tokenStorage.Set(ctx, tgRequestAuth.Token, tgRequestAuth.TgUsername)
 			if errInside != nil {
 				return fmt.Errorf("to set token with not existing user: %w", errInside)
 			}
@@ -125,12 +125,12 @@ func (a *App) LoginUserFromTg(ctx context.Context, token, username string, tgUse
 			return nil
 		}
 
-		return fmt.Errorf("to get user full by username=%s: %w", username, err)
+		return fmt.Errorf("to get user full by username=%s: %w", tgRequestAuth.TgUsername, err)
 	}
 
-	err = a.tokenStorage.Set(ctx, token, username)
+	err = a.tokenStorage.Set(ctx, tgRequestAuth.Token, tgRequestAuth.TgUsername)
 	if err != nil {
-		return fmt.Errorf("to set token existing user, username=%s: %w", username, err)
+		return fmt.Errorf("to set token existing user, username=%s: %w", tgRequestAuth.TgUsername, err)
 	}
 
 	return nil
