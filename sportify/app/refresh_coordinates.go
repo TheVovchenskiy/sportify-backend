@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/TheVovchenskiy/sportify-backend/pkg/reformat_url_open_map"
+	"github.com/google/uuid"
 	"io"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 
 	"github.com/TheVovchenskiy/sportify-backend/models"
@@ -63,7 +65,59 @@ func (a *App) getCoordinatesByAddress(ctx context.Context, address string) (stri
 }
 
 func (a *App) RefreshCoordinates(ctx context.Context, period time.Duration) {
-	ticker := time.NewTicker(time.Second * 60)
+	type coordinates struct {
+		ID      uuid.UUID
+		Address string
+	}
+
+	var (
+		queueCoordinates       []coordinates
+		isIDInQueueCoordinates = make(map[uuid.UUID]struct{})
+		muQueue                sync.RWMutex
+	)
+
+	go func() {
+		tickerQueueCoordinates := time.NewTicker(time.Millisecond * 1500)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-tickerQueueCoordinates.C:
+				if len(queueCoordinates) != 0 {
+					func() {
+						muQueue.Lock()
+						defer muQueue.Unlock()
+
+						curCoordinate := queueCoordinates[0]
+						queueCoordinates = queueCoordinates[1:]
+						delete(isIDInQueueCoordinates, curCoordinate.ID)
+
+						latitude, longitude, err := a.getCoordinatesByAddress(ctx, curCoordinate.Address)
+						if err != nil {
+							a.logger.WithCtx(ctx).Error(
+								fmt.Sprintf("address: %s, err: %s", curCoordinate.Address, err.Error()),
+							)
+							queueCoordinates = append(queueCoordinates, curCoordinate)
+							isIDInQueueCoordinates[curCoordinate.ID] = struct{}{}
+							return
+						}
+
+						err = a.eventStorage.SetCoordinates(ctx, latitude, longitude, curCoordinate.ID)
+						if err != nil {
+							a.logger.WithCtx(ctx).Error(err)
+							queueCoordinates = append(queueCoordinates, curCoordinate)
+							isIDInQueueCoordinates[curCoordinate.ID] = struct{}{}
+							return
+						}
+
+						a.logger.Infof("set coordinates for event %s: %s, %s", curCoordinate.ID.String(), latitude, longitude)
+					}()
+				}
+			}
+		}
+	}()
+
+	ticker := time.NewTicker(time.Second)
 	for {
 		select {
 		case <-ctx.Done():
@@ -77,6 +131,7 @@ func (a *App) RefreshCoordinates(ctx context.Context, period time.Duration) {
 				continue
 			}
 
+			// TODO optimize from read all db to read only WHERE coordinates IS NULL
 			events, err := a.eventStorage.FindEvents(ctx, params)
 			if err != nil {
 				a.logger.WithCtx(ctx).Error(err)
@@ -84,25 +139,17 @@ func (a *App) RefreshCoordinates(ctx context.Context, period time.Duration) {
 			}
 
 			for _, event := range events {
-				if event.Latitude == nil || event.Longitude == nil {
+				muQueue.Lock()
+				_, ok := isIDInQueueCoordinates[event.ID]
+				if event.Latitude == nil && event.Longitude == nil && !ok {
 					address := reformat_url_open_map.ReformatURLOpenMap(event.Address)
-					latitude, longitude, err := a.getCoordinatesByAddress(ctx, address)
-					if err != nil {
-						a.logger.WithCtx(ctx).Error(fmt.Sprintf("address: %s, err: %s", address, err.Error()))
-						continue
-					}
-
-					err = a.eventStorage.SetCoordinates(ctx, latitude, longitude, event.ID)
-					if err != nil {
-						a.logger.WithCtx(ctx).Error(err)
-						continue
-					}
-
-					a.logger.Infof("set coordinates for event %s: %s, %s", event.ID.String(), latitude, longitude)
+					queueCoordinates = append(queueCoordinates, coordinates{
+						ID:      event.ID,
+						Address: address,
+					})
+					isIDInQueueCoordinates[event.ID] = struct{}{}
 				}
-
-				// limit of open map
-				time.Sleep(time.Second * 2)
+				muQueue.Unlock()
 			}
 		}
 	}
