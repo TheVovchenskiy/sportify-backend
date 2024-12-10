@@ -28,7 +28,6 @@ func (a *App) getCoordinatesByAddress(ctx context.Context, address string) (stri
 
 	values := req.URL.Query()
 
-	address = reformat_url_open_map.ReformatURLOpenMap(address)
 	values.Add("q", address)
 	req.URL.RawQuery = values.Encode()
 
@@ -86,9 +85,10 @@ func (a *App) RefreshCoordinates(ctx context.Context, period time.Duration) {
 
 			for _, event := range events {
 				if event.Latitude == nil || event.Longitude == nil {
-					latitude, longitude, err := a.getCoordinatesByAddress(ctx, event.Address)
+					address := reformat_url_open_map.ReformatURLOpenMap(event.Address)
+					latitude, longitude, err := a.getCoordinatesByAddress(ctx, address)
 					if err != nil {
-						a.logger.WithCtx(ctx).Error(err)
+						a.logger.WithCtx(ctx).Error(fmt.Sprintf("address: %s, err: %s", address, err.Error()))
 						continue
 					}
 
