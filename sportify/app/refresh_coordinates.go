@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/TheVovchenskiy/sportify-backend/pkg/reformat_url_open_map"
 	"io"
 	"net/http"
 	"net/url"
@@ -26,6 +27,8 @@ func (a *App) getCoordinatesByAddress(ctx context.Context, address string) (stri
 	}
 
 	values := req.URL.Query()
+
+	address = reformat_url_open_map.ReformatURLOpenMap(address)
 	values.Add("q", address)
 	req.URL.RawQuery = values.Encode()
 
