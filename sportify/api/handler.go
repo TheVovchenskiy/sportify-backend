@@ -472,7 +472,15 @@ func (h *Handler) GetEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	models.WriteJSONResponse(w, event)
+	user, err := h.app.GetUserFullByUserID(ctx, event.CreatorID)
+	if err != nil {
+		h.handleGetEventError(ctx, w, err)
+		return
+	}
+
+	eventAPI := models.MapFullEventToAPI(event, user.Username, user.TgID)
+
+	models.WriteJSONResponse(w, eventAPI)
 }
 
 var ErrRequestSubscribeEvent = errors.New("некорректный запрос подписки на событие")

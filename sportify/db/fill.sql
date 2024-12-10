@@ -24,3 +24,7 @@ INSERT INTO public.event (
        '', 0, 'site',
        'https://127.0.0.1/api/v1/img/default_football.jpeg',
        '{"https://127.0.0.1/api/v1/img/default_football.jpeg"}');
+
+-- password=user1234
+INSERT INTO "user" (id, username, password) VALUES
+    ('0bc13767-82d4-46e2-8dd8-51a5df1c7426', 'user', '36189b41f377c669cb9144a7cab5ad11261dbe33ffe066cdd0896ef82360423bf1efe94cade268ca');

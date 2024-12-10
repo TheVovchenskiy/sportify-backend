@@ -11,6 +11,28 @@ const (
 	CreationTypeSite CreationType = "site"
 )
 
+type CreatorAPI struct {
+	CreatorID uuid.UUID `json:"creator_id"`
+	Username  string    `json:"username"`
+	TgURL     *string   `json:"tg_url"`
+}
+
+type FullEventAPI struct {
+	FullEvent
+	CreatorAPI CreatorAPI `json:"creator"`
+}
+
+func MapFullEventToAPI(fullEvent *FullEvent, username string, tgUserID *int64) *FullEventAPI {
+	return &FullEventAPI{
+		FullEvent: *fullEvent,
+		CreatorAPI: CreatorAPI{
+			CreatorID: fullEvent.CreatorID,
+			Username:  username,
+			TgURL:     mapTgURL(tgUserID, username),
+		},
+	}
+}
+
 type FullEvent struct {
 	ShortEvent
 	URLAuthor    *string      `json:"url_author"`
