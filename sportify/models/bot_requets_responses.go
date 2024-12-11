@@ -10,6 +10,7 @@ type BotUser struct {
 
 type BotEvent struct {
 	ID          uuid.UUID   `json:"id"`
+	Description *string     `json:"description"`
 	Creator     BotUser     `json:"creator"`
 	SportType   SportType   `json:"sport_type"`
 	Address     string      `json:"address"`

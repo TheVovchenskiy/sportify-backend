@@ -77,6 +77,7 @@ func (e *FullEvent) ToBotEvent(creator *BotUser, subscribers []*BotUser, hashtag
 	return &BotEvent{ //nolint:exhaustruct
 		ID:          e.ID,
 		Creator:     *creator,
+		Description: e.Description,
 		SportType:   e.SportType,
 		Address:     e.Address,
 		DateAndTime: e.DateAndTime,

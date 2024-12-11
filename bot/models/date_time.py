@@ -26,12 +26,12 @@ class DateTime:
 
     def __str__(self) -> str:
         parts = [
-            f"Дата: {self.date.strftime(DATE_FORMAT)}",
-            f"Начало: {self.start_time.strftime(TIME_FORMAT)}",
+            f"📅 *Дата*: {self.date.strftime(DATE_FORMAT)}",
+            f"🕘 *Начало*: {self.start_time.strftime(TIME_FORMAT)}",
         ]
         if self.end_time:
             parts.append(
-                f"End Time: {self.end_time.strftime(TIME_FORMAT)}",
+                f"🕥 *Конец*: {self.end_time.strftime(TIME_FORMAT)}",
             )
 
         return "\n".join(parts)

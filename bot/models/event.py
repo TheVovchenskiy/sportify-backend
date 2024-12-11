@@ -19,6 +19,7 @@ class Event:
     game_levels: list[str]
     busy: int
     subscribers: list[User]
+    description: str | None = None
     url_preview: str | None = None
     capacity: int | None = None
     price: int | None = None
@@ -28,27 +29,38 @@ class Event:
 
     def __str__(self) -> str:
         lines = [
-            "*Событие*",
-            f"Автор: {self.creator}",
-            f"Вид спорта: {get_sport_type_ru(self.sport_type)}",
-            escape_markdown(f"Адрес: {self.address}", 2),
+            "🎉 *Событие*",
+            "",
+            f"👤 *Автор:* {self.creator}",
+            f"🏀 *Вид спорта:* {get_sport_type_ru(self.sport_type)}",
+            escape_markdown(f"📍 *Адрес:* {self.address}", 2),
             escape_markdown(str(self.date_and_time), 2),
-            f"Цена: {self.price if not self.is_free else "БЕСПЛАТНО"}",
+            f"💰 *Цена:* {f"{self.price} ₽" if not self.is_free else "БЕСПЛАТНО"}",
             (
-                f"Уровень игры: [{', '.join(f"`{escape_markdown(en_to_ru_game_level[GameLevel(game_level)], 2) }`" for game_level in self.game_levels)}]"
+                f"📊 *Уровень игры:* [{', '.join(f"`{escape_markdown(en_to_ru_game_level[GameLevel(game_level)], 2) }`" for game_level in self.game_levels)}]"
                 if self.game_levels
                 else ""
             ),
-            f"Вместимость: {self.capacity}",
-            f"Занято мест: {self.busy}",
-            (f"Участники:\n{self.__str_subscribers()}" if self.subscribers else ""),
+            f"🔢 *Вместимость:* {self.capacity}" if self.capacity else None,
+            f"✅ *Занято мест:* {self.busy}",
+            (
+                f"👥 *Участники:*\n{self.__str_subscribers()}"
+                if self.subscribers
+                else ""
+            ),
         ]
+
+        if self.description:
+            lines.append("")
+            lines.append("📝 *Описание:*")
+            lines.append(self.description)
 
         if self.hashtags:
             lines.append("")
+            lines.append("🔖 *Хэштеги:*")
             lines.append(escape_markdown(" ".join(self.hashtags), 2))
 
-        return "\n".join(lines)
+        return "\n".join(filter(lambda line: line is not None, lines))
 
     def __str_subscribers(self):
         if self.subscribers:

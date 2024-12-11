@@ -263,6 +263,7 @@ func (h *Handler) CreateTgUser(w http.ResponseWriter, r *http.Request) {
 	err = h.app.CreateTgUserIfNeeded(ctx, tgReqAuth.TgUsername, tgReqAuth.TgUserID)
 	if err != nil {
 		h.handleLoginFromTg(ctx, w, err)
+		return
 	}
 
 	models.WriteJSONResponse(w, "ok")
