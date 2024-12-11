@@ -56,8 +56,8 @@ async def subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         LOGGER.info(f"No event found for message {query.message.id}")
         return
 
-    user_id = update.message.from_user.id
-    username = update.message.from_user.username
+    user_id = query.from_user.id
+    username = query.from_user.username
     LOGGER.info(
         "Handling start create tg user if needed, ("
         f"user_id = {user_id}"
