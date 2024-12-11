@@ -1,6 +1,8 @@
 import datetime
 from dataclasses import dataclass
 
+from telegram.helpers import escape_markdown
+
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 DATE_FORMAT = "%d.%m.%Y"
 TIME_FORMAT = "%H:%M"
@@ -26,12 +28,12 @@ class DateTime:
 
     def __str__(self) -> str:
         parts = [
-            f"📅 *Дата*: {self.date.strftime(DATE_FORMAT)}",
-            f"🕘 *Начало*: {self.start_time.strftime(TIME_FORMAT)}",
+            f"📅 *Дата*: {escape_markdown(self.date.strftime(DATE_FORMAT), 2)}",
+            f"🕘 *Начало*: {escape_markdown(self.start_time.strftime(TIME_FORMAT),2)}",
         ]
         if self.end_time:
             parts.append(
-                f"🕥 *Конец*: {self.end_time.strftime(TIME_FORMAT)}",
+                f"🕥 *Конец*: {escape_markdown(self.end_time.strftime(TIME_FORMAT), 2)}",
             )
 
         return "\n".join(parts)

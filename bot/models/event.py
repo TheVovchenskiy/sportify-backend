@@ -33,8 +33,8 @@ class Event:
             "",
             f"👤 *Автор:* {self.creator}",
             f"🏀 *Вид спорта:* {get_sport_type_ru(self.sport_type)}",
-            escape_markdown(f"📍 *Адрес:* {self.address}", 2),
-            escape_markdown(str(self.date_and_time), 2),
+            f"📍 *Адрес:* {escape_markdown(self.address, 2)}",
+            str(self.date_and_time),
             f"💰 *Цена:* {f"{self.price} ₽" if not self.is_free else "БЕСПЛАТНО"}",
             (
                 f"📊 *Уровень игры:* [{', '.join(f"`{escape_markdown(en_to_ru_game_level[GameLevel(game_level)], 2) }`" for game_level in self.game_levels)}]"
