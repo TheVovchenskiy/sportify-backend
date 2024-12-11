@@ -222,7 +222,7 @@ func (a *App) getDefaultEventPhoto(sportType models.SportType) string {
 	case models.SportTypeBasketball:
 		return result + "default_basketball.png"
 	case models.SportTypeVolleyball:
-		return result + "default_football.jpeg"
+		return result + "default_volleyball.jpg"
 	}
 
 	return result + "default_football.jpeg"
@@ -232,8 +232,9 @@ func (a *App) CreateEventSite(ctx context.Context, request *models.RequestEventC
 	result := models.NewFullEventSite(uuid.New(), request.UserID, &request.CreateEvent)
 
 	if result.URLPreview == "" || len(result.URLPhotos) == 0 {
-		result.URLPreview = a.getDefaultEventPhoto(result.SportType)
-		result.URLPhotos = []string{a.getDefaultEventPhoto(result.SportType)}
+		defaultPhoto := a.getDefaultEventPhoto(result.SportType)
+		result.URLPreview = defaultPhoto
+		result.URLPhotos = []string{defaultPhoto}
 	}
 
 	err := a.eventStorage.CreateEvent(ctx, result)
