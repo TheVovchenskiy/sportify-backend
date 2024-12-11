@@ -214,8 +214,27 @@ func (a *App) onEventDelete(ctx context.Context, eventID uuid.UUID) error {
 	return nil
 }
 
+func (a *App) getDefaultEventPhoto(sportType models.SportType) string {
+	result := a.urlPrefixFile
+	switch sportType {
+	case models.SportTypeFootball:
+		return result + "default_football.jpeg"
+	case models.SportTypeBasketball:
+		return result + "default_basketball.png"
+	case models.SportTypeVolleyball:
+		return result + "default_football.jpeg"
+	}
+
+	return result + "default_football.jpeg"
+}
+
 func (a *App) CreateEventSite(ctx context.Context, request *models.RequestEventCreateSite) (*models.FullEvent, error) {
 	result := models.NewFullEventSite(uuid.New(), request.UserID, &request.CreateEvent)
+
+	if result.URLPreview == "" || len(result.URLPhotos) == 0 {
+		result.URLPreview = a.getDefaultEventPhoto(result.SportType)
+		result.URLPhotos = []string{a.getDefaultEventPhoto(result.SportType)}
+	}
 
 	err := a.eventStorage.CreateEvent(ctx, result)
 	if err != nil {
