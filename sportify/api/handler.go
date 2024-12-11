@@ -237,7 +237,10 @@ func (h *Handler) GetUsersSubActiveEvents(w http.ResponseWriter, r *http.Request
 	}
 
 	filterParams.SubscriberIDs = []uuid.UUID{userID}
-	filterParams.DateExpression = squirrel.GtOrEq{"start_time": time.Now().Add(-1 * time.Hour * 24)}
+	// Это жесткий костыль, как привратить time.Now() из московского пояса в utc, но лучше я не придумал
+	// time.Local = time.UTC не работает должным образом
+	now := time.Now().Add(time.Hour * 3)
+	filterParams.DateExpression = squirrel.GtOrEq{"start_time": now.Add(-1 * time.Hour * 24)}
 
 	events, err := h.app.FindEvents(ctx, filterParams)
 	h.logger.WithCtx(ctx).Info("Got events", events)
@@ -279,7 +282,10 @@ func (h *Handler) GetUsersSubArchiveEvents(w http.ResponseWriter, r *http.Reques
 	}
 
 	filterParams.SubscriberIDs = []uuid.UUID{userID}
-	filterParams.DateExpression = squirrel.LtOrEq{"start_time": time.Now().Add(-1 * time.Hour * 24)}
+	// Это жесткий костыль, как привратить time.Now() из московского пояса в utc, но лучше я не придумал
+	// time.Local = time.UTC не работает должным образом
+	now := time.Now().Add(time.Hour * 3)
+	filterParams.DateExpression = squirrel.LtOrEq{"start_time": now.Add(-1 * time.Hour * 24)}
 
 	events, err := h.app.FindEvents(ctx, filterParams)
 	h.logger.WithCtx(ctx).Info("Got events", events)
@@ -433,6 +439,11 @@ func (h *Handler) FindEvents(w http.ResponseWriter, r *http.Request) {
 		h.handleFindEvents(ctx, w, fmt.Errorf("%w: %w", ErrRequestFilterParams, err))
 		return
 	}
+
+	// Это жесткий костыль, как привратить time.Now() из московского пояса в utc, но лучше я не придумал
+	// time.Local = time.UTC не работает должным образом
+	now := time.Now().Add(time.Hour * 3)
+	filterParams.DateExpression = squirrel.GtOrEq{"start_time": now}
 
 	events, err := h.app.FindEvents(ctx, filterParams)
 	if err != nil {

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/TheVovchenskiy/sportify-backend/pkg/common"
-	"github.com/TheVovchenskiy/sportify-backend/pkg/utils"
 )
 
 type dateAndTimeAPI struct {
@@ -46,13 +45,14 @@ func (d *DateAndTime) UnmarshalJSON(raw []byte) error {
 	}
 
 	year, month, day := dateAndTimeAPI.Date.Date()
+	dateAndTimeAPI.Date = time.Date(year, month, day, 0, 0, 0, 0, time.UTC)
 
 	startTime, err := time.Parse(time.TimeOnly, dateAndTimeAPI.StartTime)
 	if err != nil {
 		return fmt.Errorf("to parse start time: %w", err)
 	}
 
-	startTime = utils.SetTimeZone(dateAndTimeAPI.Date, startTime)
+	//startTime = utils.SetTimeZone(dateAndTimeAPI.Date, startTime)
 
 	// TODO later change from UTC to correct
 	startTime = time.Date(year, month, day, startTime.Hour(), startTime.Minute(), startTime.Second(), 0, time.UTC)
@@ -64,7 +64,7 @@ func (d *DateAndTime) UnmarshalJSON(raw []byte) error {
 			return fmt.Errorf("to parse end time: %w", err)
 		}
 
-		endTimeValue = utils.SetTimeZone(dateAndTimeAPI.Date, endTimeValue)
+		//endTimeValue = utils.SetTimeZone(dateAndTimeAPI.Date, endTimeValue)
 		endTime = &endTimeValue
 
 		// TODO later change from UTC to correct
