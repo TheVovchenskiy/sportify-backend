@@ -108,7 +108,9 @@ func (p *PostgresStorage) GetEvent(ctx context.Context, eventID uuid.UUID) (*mod
 	SELECT creator_id, subscriber_ids, sport_type, address, date_start, start_time, end_time,
        price, game_level, description, raw_message, capacity, busy, creation_type,
        url_author, url_message, 
-       url_preview, url_photos FROM "public".event WHERE id = $1 AND deleted_at IS NULL;`
+       url_preview, url_photos,
+       ST_X(coordinates::geometry) as latitude, ST_Y(coordinates::geometry) as longitude
+	FROM "public".event WHERE id = $1 AND deleted_at IS NULL;`
 
 	rawRow := p.pool.QueryRow(ctx, sqlSelectEvent, eventID)
 
@@ -122,7 +124,7 @@ func (p *PostgresStorage) GetEvent(ctx context.Context, eventID uuid.UUID) (*mod
 	err := rawRow.Scan(&event.CreatorID, &rawSubscriberIDs, &event.SportType, &event.Address,
 		&event.DateAndTime.Date, &event.DateAndTime.StartTime, &event.DateAndTime.EndTime, &event.Price, &rawGameLevels,
 		&event.Description, &event.RawMessage, &event.Capacity, &event.Busy, &event.CreationType,
-		&event.URLAuthor, &event.URLMessage, &event.URLPreview, &rawURLPhotos)
+		&event.URLAuthor, &event.URLMessage, &event.URLPreview, &rawURLPhotos, &event.Latitude, &event.Longitude)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFoundEvent
