@@ -110,7 +110,12 @@ func (s *Server) Run(ctx context.Context, configFile []string) error {
 	)
 
 	tgAPI := telegramapi.NewTelegramAPIDummy()
-	handler := api.NewHandler(appSportify, logger, cfg.App.FolderID, cfg.App.IAMToken, cfg.App.Domain, cfg.App.Port, cfg.App.APIPrefix, tgAPI)
+	handler := api.NewHandler(
+		appSportify,
+		logger,
+		cfg.App.FolderID, cfg.App.IAMToken, cfg.App.Domain, cfg.App.Port, cfg.App.APIPrefix, cfg.App.URLPrefixFile,
+		tgAPI,
+	)
 	checkCredFunc := handler.NewCredCheckFunc(ctx)
 	authMiddleware, authHandler, tokenServiceProvider := s.prepareAuthProviders(
 		ctx,

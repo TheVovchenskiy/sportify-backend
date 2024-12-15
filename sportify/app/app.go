@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -288,8 +289,23 @@ func (a *App) EditEventSite(ctx context.Context, request *models.RequestEventEdi
 		request.EventEditSite.GameLevels = eventFromDB.GameLevels
 	}
 
+	if request.EventEditSite.SportType == nil {
+		request.EventEditSite.SportType = &eventFromDB.SportType
+	}
+
+	if request.EventEditSite.URLPreview == nil {
+		request.EventEditSite.URLPreview = &eventFromDB.URLPreview
+	}
+
 	if len(request.EventEditSite.URLPhotos) == 0 {
 		request.EventEditSite.URLPhotos = eventFromDB.URLPhotos
+	}
+
+	if *request.EventEditSite.SportType != eventFromDB.SportType &&
+		strings.Contains(*request.EventEditSite.URLPreview, "default") {
+		defaultPhoto := a.getDefaultEventPhoto(*request.EventEditSite.SportType)
+		request.EventEditSite.URLPreview = &defaultPhoto
+		request.EventEditSite.URLPhotos = []string{defaultPhoto}
 	}
 
 	preResult := &models.FullEvent{

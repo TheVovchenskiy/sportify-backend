@@ -29,7 +29,10 @@ func mapTgURL(tgUserID *int64, tgUsername string) *string {
 	return common.Ref("https://t.me/" + tgUsername)
 }
 
-func MapUserFullToProfileAPI(userIDFromToken uuid.UUID, userFull *UserFull) *ProfileAPI {
+func MapUserFullToProfileAPI(urlPrefixFile string, userIDFromToken uuid.UUID, userFull *UserFull) *ProfileAPI {
+	if userFull.PhotoURL == nil {
+		userFull.PhotoURL = common.Ref(urlPrefixFile + "user-default-avatar.png")
+	}
 	return &ProfileAPI{
 		IsMyProfile:  userIDFromToken == userFull.ID,
 		IsTgOnlyUser: userFull.TgID != nil,

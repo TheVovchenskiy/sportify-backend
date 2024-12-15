@@ -63,27 +63,34 @@ type App interface {
 var _ App = (*app.App)(nil)
 
 type Handler struct {
-	folderID     string
-	iamToken     string
-	domain       string
-	port         string
-	apiPrefix    string
-	logger       *mylogger.MyLogger
-	telegram     *telegramapi.TelegramAPIDummy
-	tokenService *token.Service
-	app          App
+	folderID      string
+	iamToken      string
+	domain        string
+	port          string
+	apiPrefix     string
+	urlPrefixFile string
+	logger        *mylogger.MyLogger
+	telegram      *telegramapi.TelegramAPIDummy
+	tokenService  *token.Service
+	app           App
 }
 
-func NewHandler(app App, logger *mylogger.MyLogger, folderID, IAMToken, domain, port, apiPrefix string, telegram *telegramapi.TelegramAPIDummy) Handler {
+func NewHandler(
+	app App,
+	logger *mylogger.MyLogger,
+	folderID, IAMToken, domain, port, apiPrefix, urlPrefixFile string,
+	telegram *telegramapi.TelegramAPIDummy,
+) Handler {
 	return Handler{
-		app:       app,
-		logger:    logger,
-		folderID:  folderID,
-		iamToken:  IAMToken,
-		domain:    domain,
-		port:      port,
-		apiPrefix: apiPrefix,
-		telegram:  telegram,
+		app:           app,
+		logger:        logger,
+		folderID:      folderID,
+		iamToken:      IAMToken,
+		domain:        domain,
+		port:          port,
+		apiPrefix:     apiPrefix,
+		urlPrefixFile: urlPrefixFile,
+		telegram:      telegram,
 	}
 }
 

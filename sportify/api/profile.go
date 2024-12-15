@@ -59,7 +59,7 @@ func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result := models.MapUserFullToProfileAPI(userIDFromToken, userFull)
+	result := models.MapUserFullToProfileAPI(h.urlPrefixFile, userIDFromToken, userFull)
 
 	models.WriteJSONResponse(w, result)
 }
