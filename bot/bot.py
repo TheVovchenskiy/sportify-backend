@@ -175,17 +175,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         [
             InlineKeyboardButton(
                 "Главная",
-                url=f"https://t.me/ond_sportify_bot?startapp=events__{chat_id}",
+                url=f"https://t.me/movelife_ond_bot?startapp=events__{chat_id}",
             ),
             InlineKeyboardButton(
                 "Создать событие",
-                url=f"https://t.me/ond_sportify_bot?startapp=create_event__{chat_id}",
+                url=f"https://t.me/movelife_ond_bot?startapp=create_event__{chat_id}",
             ),
         ],
         [
             InlineKeyboardButton(
                 "Карта",
-                url=f"https://t.me/ond_sportify_bot?startapp=map__{chat_id}",
+                url=f"https://t.me/movelife_ond_bot?startapp=map__{chat_id}",
             ),
         ],
     ]

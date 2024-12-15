@@ -130,6 +130,6 @@ func (t *TelegramAPIDummy) Send(_ context.Context, chatID int, text string) erro
 
 func (t *TelegramAPIDummy) BotInfo(_ context.Context) (*provider.BotInfo, error) {
 	return &provider.BotInfo{
-		Username: "ond_sportify_bot", // TODO: handle in config
+		Username: "movelife_ond_bot", // TODO: handle in config
 	}, nil
 }
