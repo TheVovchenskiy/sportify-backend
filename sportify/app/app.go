@@ -85,6 +85,7 @@ type App struct {
 	yookassaClient       YookassaClient
 	httpClient           *http.Client
 	logger               *mylogger.MyLogger
+	muFindByAddress      *sync.Mutex
 	botAPI               BotAPI
 }
 
@@ -100,14 +101,15 @@ func NewApp(
 	// yookassaClient YookassaClient,
 ) *App {
 	app := &App{
-		urlPrefixFile: urlPrefixFile,
-		eventStorage:  eventStorage,
-		fileStorage:   fileStorage,
-		authStorage:   authStorage,
-		httpClient:    http.DefaultClient,
-		tokenStorage:  tokenStorage,
-		logger:        logger,
-		botAPI:        botAPI,
+		urlPrefixFile:   urlPrefixFile,
+		eventStorage:    eventStorage,
+		fileStorage:     fileStorage,
+		authStorage:     authStorage,
+		httpClient:      http.DefaultClient,
+		tokenStorage:    tokenStorage,
+		logger:          logger,
+		muFindByAddress: &sync.Mutex{},
+		botAPI:          botAPI,
 		// paymentPayoutStorage: paymentPayoutStorage,
 		// yookassaClient:       yookassaClient,
 	}
@@ -375,6 +377,24 @@ func (a *App) GetEvents(ctx context.Context) ([]models.ShortEvent, error) {
 }
 
 func (a *App) FindEvents(ctx context.Context, filterParams *models.FilterParams) ([]models.ShortEvent, error) {
+	if filterParams.Address != "" {
+		func() {
+			a.muFindByAddress.Lock()
+			defer a.muFindByAddress.Unlock()
+
+			latitude, longitude, err := a.getCoordinatesByAddress(ctx, filterParams.Address, UserAgentFind)
+			if err != nil {
+				a.logger.WithCtx(ctx).Errorf("to find address from=%s FindEvents: %v", filterParams.Address, err)
+			} else {
+				filterParams.AddressLatitude = &latitude
+				filterParams.AddressLongitude = &longitude
+			}
+
+			time.Sleep(time.Millisecond * 1100)
+		}()
+
+	}
+
 	return a.eventStorage.FindEvents(ctx, filterParams)
 }
 

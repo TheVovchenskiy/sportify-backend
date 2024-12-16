@@ -342,6 +342,14 @@ func (p *PostgresStorage) FindEvents(ctx context.Context, filterParams *models.F
 		query = query.Where(squirrel.Expr("capacity - busy >= ?", *filterParams.FreePlaces))
 	}
 
+	if filterParams.Address != "" {
+		if filterParams.AddressLatitude != nil && filterParams.AddressLongitude != nil {
+			query = query.Where(fmt.Sprintf("ST_DWithin(ST_POINT(%s,%s, 4326)::geography, coordinates, 5000.0)",
+				*filterParams.AddressLatitude, *filterParams.AddressLongitude))
+		}
+		// TODO add find address or by reqexp or another text search
+	}
+
 	query = query.OrderBy(filterParams.OrderBy + " " + filterParams.SortOrder)
 
 	sql, args, err := query.ToSql()

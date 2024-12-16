@@ -20,9 +20,12 @@ func requestURLOpenMap() string {
 		"?&limit=1&accept-language=ru-RU&countrycodes=RU&format=jsonv2")
 }
 
-const userAgent = "SportifyApp/1.0"
+const (
+	UserAgentRefresh = "SportifyApp/1.0"
+	UserAgentFind    = "Move-life-App/1.0"
+)
 
-func (a *App) getCoordinatesByAddress(ctx context.Context, address string) (string, string, error) {
+func (a *App) getCoordinatesByAddress(ctx context.Context, address string, userAgent string) (string, string, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", requestURLOpenMap(), nil)
 	if err != nil {
 		return "", "", fmt.Errorf("to new request: %w", err)
@@ -92,7 +95,7 @@ func (a *App) RefreshCoordinates(ctx context.Context, period time.Duration) {
 						queueCoordinates = queueCoordinates[1:]
 						delete(isIDInQueueCoordinates, curCoordinate.ID)
 
-						latitude, longitude, err := a.getCoordinatesByAddress(ctx, curCoordinate.Address)
+						latitude, longitude, err := a.getCoordinatesByAddress(ctx, curCoordinate.Address, UserAgentRefresh)
 						if err != nil {
 							a.logger.WithCtx(ctx).Error(
 								fmt.Sprintf("address: %s, err: %s", curCoordinate.Address, err.Error()),

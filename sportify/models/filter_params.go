@@ -3,6 +3,7 @@ package models
 import (
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/TheVovchenskiy/sportify-backend/pkg/common"
 
@@ -18,6 +19,7 @@ type FilterParams struct {
 	PriceMin   *int
 	PriceMax   *int
 	FreePlaces *int
+	Address    string
 	OrderBy    string
 	SortOrder  string
 
@@ -29,6 +31,8 @@ type FilterParams struct {
 	// DateExpression is representation of WHERE statement
 	// you can use squirrel.Eq and another with similar sense
 	DateExpression any
+
+	AddressLatitude, AddressLongitude *string
 }
 
 //nolint:cyclop
@@ -44,6 +48,7 @@ func ParseFilterParams(query url.Values) (*FilterParams, error) {
 				return GameLevel(s)
 			}, query["game_level"]),
 		DateStarts: query["date_start"],
+		Address:    query.Get("address"),
 		OrderBy:    query.Get("order_by"),
 		SortOrder:  query.Get("sort_order"),
 	}
@@ -71,6 +76,8 @@ func ParseFilterParams(query url.Values) (*FilterParams, error) {
 		}
 		params.FreePlaces = &freePlaces
 	}
+
+	params.Address = strings.TrimSpace(params.Address)
 
 	if params.OrderBy == "" {
 		params.OrderBy = "start_time"
