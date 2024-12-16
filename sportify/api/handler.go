@@ -496,7 +496,32 @@ func (h *Handler) GetEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	eventAPI := models.MapFullEventToAPI(event, user.Username, user.TgID)
+	userAPI := models.UserShortcutAPI{
+		ID:       user.ID,
+		Username: user.Username,
+		PhotoURL: user.GetPhotoURL(h.urlPrefixFile),
+		TgURL:    models.MapTgURL(user.TgID, user.Username),
+	}
+
+	var subscribersAPI []models.UserShortcutAPI
+
+	for _, subscriberID := range event.ShortEvent.Subscribers {
+		// TODO think may this return 500 by reason not exist user in database ???
+		subscriber, err := h.app.GetUserFullByUserID(ctx, subscriberID)
+		if err != nil {
+			h.handleGetEventError(ctx, w, err)
+			return
+		}
+
+		subscribersAPI = append(subscribersAPI, models.UserShortcutAPI{
+			ID:       subscriber.ID,
+			Username: subscriber.Username,
+			PhotoURL: subscriber.GetPhotoURL(h.urlPrefixFile),
+			TgURL:    models.MapTgURL(subscriber.TgID, subscriber.Username),
+		})
+	}
+
+	eventAPI := models.MapFullEventToAPI(event, userAPI, subscribersAPI)
 
 	models.WriteJSONResponse(w, eventAPI)
 }

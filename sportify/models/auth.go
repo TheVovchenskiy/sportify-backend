@@ -27,3 +27,11 @@ func (u *UserFull) ToBotUser() *BotUser {
 		TgID:     u.TgID,
 	}
 }
+
+func (u *UserFull) GetPhotoURL(urlPrefixFile string) string {
+	if u.PhotoURL != nil {
+		return *u.PhotoURL
+	}
+
+	return urlPrefixFile + "user-default-avatar.png"
+}
