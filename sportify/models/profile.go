@@ -21,7 +21,7 @@ type ProfileAPI struct {
 	SportTypes   []SportType `json:"sport_types"`
 }
 
-func mapTgURL(tgUserID *int64, tgUsername string) *string {
+func MapTgURL(tgUserID *int64, tgUsername string) *string {
 	if tgUserID == nil {
 		return nil
 	}
@@ -42,7 +42,7 @@ func MapUserFullToProfileAPI(urlPrefixFile string, userIDFromToken uuid.UUID, us
 		SecondName:   userFull.SecondName,
 		PhotoURL:     userFull.PhotoURL,
 		Description:  userFull.Description,
-		TgURL:        mapTgURL(userFull.TgID, userFull.Username),
+		TgURL:        MapTgURL(userFull.TgID, userFull.Username),
 		SportTypes:   userFull.SportTypes,
 	}
 }
