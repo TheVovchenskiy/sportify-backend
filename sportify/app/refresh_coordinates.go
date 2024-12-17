@@ -131,7 +131,13 @@ func (a *App) getCoordinatesByAddressFromYandex(ctx context.Context, address str
 		return "", "", fmt.Errorf("to unmarshal body: %w", err)
 	}
 
-	return response.GetCoordinates()
+	lat, long, err := response.GetCoordinates()
+	if err != nil {
+		a.logger.WithCtx(ctx).Info("body yandex api" + string(body))
+		return "", "", err
+	}
+
+	return lat, long, nil
 }
 
 func requestURLOpenMap() string {
@@ -233,7 +239,6 @@ func (a *App) RefreshCoordinates(ctx context.Context, period time.Duration) {
 							a.logger.WithCtx(ctx).Error(
 								fmt.Sprintf("address: %s, err: %s", curCoordinate.Address, err.Error()),
 							)
-							queueCoordinates = append(queueCoordinates, curCoordinate)
 							isIDInQueueCoordinates[curCoordinate.ID] = struct{}{}
 							return
 						}
@@ -241,7 +246,6 @@ func (a *App) RefreshCoordinates(ctx context.Context, period time.Duration) {
 						err = a.eventStorage.SetCoordinates(ctx, latitude, longitude, curCoordinate.ID)
 						if err != nil {
 							a.logger.WithCtx(ctx).Error(err)
-							queueCoordinates = append(queueCoordinates, curCoordinate)
 							isIDInQueueCoordinates[curCoordinate.ID] = struct{}{}
 							return
 						}
