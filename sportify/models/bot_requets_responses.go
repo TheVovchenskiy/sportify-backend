@@ -33,10 +33,27 @@ type EventCreatedBotRequest struct {
 	// TgUserID *int64   `json:"tg_user_id"`
 }
 
+type EventCreatedBotResponse struct {
+	TgChatID    *int64 `json:"tg_chat_id"`
+	TgMessageID *int64 `json:"tg_message_id"`
+	// TgUserID *int64   `json:"tg_user_id"`
+}
+
 type EventUpdatedBotRequest struct {
-	Event BotEvent `json:"event"`
+	TgUserIDsToNotify []int64  `json:"tg_user_ids_to_notify,omitempty"`
+	TgChatID          *int64   `json:"tg_chat_id"`
+	TgMessageID       *int64   `json:"tg_message_id"`
+	Event             BotEvent `json:"event"`
 }
 
 type EventDeletedBotRequest struct {
-	EventID uuid.UUID `json:"event_id"`
+	TgChatID    *int64    `json:"tg_chat_id"`
+	TgMessageID *int64    `json:"tg_message_id"`
+	EventID     uuid.UUID `json:"event_id"`
+}
+
+type SubscribeEventFromTgRequest struct {
+	TgChatID    int64 `json:"tg_chat_id"`
+	TgMessageID int64 `json:"tg_message_id"`
+	TgUserID    int64 `json:"tg_user_id"`
 }

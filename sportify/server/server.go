@@ -34,8 +34,9 @@ func (s *Server) runTgHandler(ctx context.Context, cfg *config.Config, handler a
 		r.Use(middleware.Logger)
 
 		r.Post("/message", handler.TryCreateEvent)
-		r.Put("/events/{id}/subscribers", handler.SubscribeEvent)
-		r.Get("/events/{event_id}/subscribers", handler.UserIsSubscribed)
+		r.Put("/tg/subscribe", handler.SubscribeEventFromTg)
+		// r.Put("/events/{id}/subscribers", handler.SubscribeEvent)
+		// r.Get("/events/{event_id}/subscribers", handler.UserIsSubscribed)
 		r.Post("/users", handler.LoginUserFromTg)
 		r.Post("/raw/users", handler.CreateTgUser)
 	})

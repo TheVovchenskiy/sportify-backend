@@ -39,6 +39,8 @@ type FullEvent struct {
 	CreationType CreationType `json:"creation_type"`
 	Description  *string      `json:"description"`
 	RawMessage   *string      `json:"raw_message"`
+	TgChatID     *int64       `json:"tg_chat_id,omitempty"`
+	TgMessageID  *int64       `json:"tg_message_id,omitempty"`
 }
 
 func NewFullEventSite(eventID uuid.UUID, userID uuid.UUID, eventCreteSite *EventCreateSite) *FullEvent {

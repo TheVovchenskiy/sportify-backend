@@ -26,27 +26,27 @@ func NewBotAPI(baseUrl string, port int) (*BotAPI, error) {
 	}, nil
 }
 
-func (api *BotAPI) EventCreated(ctx context.Context, eventCreateRequest models.EventCreatedBotRequest) error {
+func (api *BotAPI) EventCreated(ctx context.Context, eventCreateRequest models.EventCreatedBotRequest) (*models.EventCreatedBotResponse, error) {
 	reqURL := fmt.Sprintf("%s:%d/%s", api.baseURL, api.port, "event/created")
 
 	logger, err := mylogger.Get()
 	if err != nil {
-		return fmt.Errorf("get logger: %w", err)
+		return nil, fmt.Errorf("get logger: %w", err)
 	}
 
 	body, err := json.Marshal(eventCreateRequest)
 	if err != nil {
-		return fmt.Errorf("marshal event created: %w", err)
+		return nil, fmt.Errorf("marshal event created: %w", err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, reqURL, bytes.NewBuffer(body))
 	if err != nil {
-		return fmt.Errorf("create request: %w", err)
+		return nil, fmt.Errorf("create request: %w", err)
 	}
 
 	resp, err := api.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("do request: %w", err)
+		return nil, fmt.Errorf("do request: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -54,16 +54,21 @@ func (api *BotAPI) EventCreated(ctx context.Context, eventCreateRequest models.E
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("read response body: %w", err)
+		return nil, fmt.Errorf("read response body: %w", err)
 	}
 
 	logger.WithCtx(ctx).Infow("Got response body", "body", string(respBody))
 
-	if 200 <= resp.StatusCode && resp.StatusCode < 300 {
-		return nil
+	if resp.StatusCode == 200 {
+		var response models.EventCreatedBotResponse
+		err = json.Unmarshal(respBody, &response)
+		if err != nil {
+			return nil, fmt.Errorf("unmarshal response: %w", err)
+		}
+		return &response, nil
 	}
 
-	return fmt.Errorf("bad status code: %d", resp.StatusCode)
+	return nil, fmt.Errorf("bad status code: %d", resp.StatusCode)
 }
 
 func (api *BotAPI) EventUpdated(ctx context.Context, eventUpdateRequest models.EventUpdatedBotRequest) error {

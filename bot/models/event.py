@@ -106,7 +106,25 @@ class EventCreatedRequest:
 
 
 @dataclass
+class EventCreatedResponse:
+    tg_chat_id: int
+    tg_message_id: int
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(**data)
+
+    def to_dict(self):
+        return {
+            "tg_chat_id": self.tg_chat_id,
+            "tg_message_id": self.tg_message_id,
+        }
+
+
+@dataclass
 class EventUpdatedRequest:
+    tg_chat_id: int
+    tg_message_id: int
     event: Event
 
     @classmethod
@@ -118,6 +136,8 @@ class EventUpdatedRequest:
 
 @dataclass
 class EventDeletedRequest:
+    tg_chat_id: int
+    tg_message_id: int
     event_id: str
 
     @classmethod

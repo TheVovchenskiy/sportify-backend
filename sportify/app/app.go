@@ -28,6 +28,7 @@ type EventStorage interface {
 	GetCreatorID(ctx context.Context, eventID uuid.UUID) (uuid.UUID, error)
 	FindEvents(ctx context.Context, filterParams *models.FilterParams) ([]models.ShortEvent, error)
 	GetEvent(ctx context.Context, id uuid.UUID) (*models.FullEvent, error)
+	GetEventByTgChatAndMessageIDs(ctx context.Context, tgChatID, tgMessageID int64) (*models.FullEvent, error)
 	SubscribeEvent(ctx context.Context, id uuid.UUID, userID uuid.UUID, subscribe bool) (*models.ResponseSubscribeEvent, error)
 	AddUserPaid(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
 	SetCoordinates(ctx context.Context, latitude, longitude string, id uuid.UUID) error
@@ -45,7 +46,7 @@ type FileStorage interface {
 var _ FileStorage = (*db.FileSystemStorage)(nil)
 
 type BotAPI interface {
-	EventCreated(ctx context.Context, eventCreateRequest models.EventCreatedBotRequest) error
+	EventCreated(ctx context.Context, eventCreateRequest models.EventCreatedBotRequest) (*models.EventCreatedBotResponse, error)
 	EventUpdated(ctx context.Context, eventUpdateRequest models.EventUpdatedBotRequest) error
 	EventDeleted(ctx context.Context, eventDeleteRequest models.EventDeletedBotRequest) error
 }
@@ -159,12 +160,7 @@ func (a *App) getBotUser(ctx context.Context, userID uuid.UUID) (*models.BotUser
 	return fullUser.ToBotUser(), nil
 }
 
-func (a *App) getBotEvent(ctx context.Context, eventID uuid.UUID) (*models.BotEvent, error) {
-	fullEvent, err := a.GetEvent(ctx, eventID)
-	if err != nil {
-		return nil, fmt.Errorf("to get event: %w", err)
-	}
-
+func (a *App) createBotEvent(ctx context.Context, fullEvent *models.FullEvent) (*models.BotEvent, error) {
 	hashtags := GenerateHashtags(&fullEvent.ShortEvent)
 
 	creator, err := a.getBotUser(ctx, fullEvent.CreatorID)
@@ -186,35 +182,96 @@ func (a *App) getBotEvent(ctx context.Context, eventID uuid.UUID) (*models.BotEv
 	return fullEvent.ToBotEvent(creator, subscribers, &hashtags), nil
 }
 
-func (a *App) onEventUpdate(ctx context.Context, eventID uuid.UUID) error {
-	botEvent, err := a.getBotEvent(ctx, eventID)
+func (a *App) getBotEvent(ctx context.Context, eventID uuid.UUID) (*models.BotEvent, error) {
+	fullEvent, err := a.GetEvent(ctx, eventID)
 	if err != nil {
-		return fmt.Errorf("to get bot event: %w", err)
+		return nil, fmt.Errorf("to get event: %w", err)
+	}
+
+	return a.createBotEvent(ctx, fullEvent)
+}
+
+func (a *App) onEventCreate(ctx context.Context, tgParams *models.TgParams, fullEvent *models.FullEvent) (chatID, messageID int64, err error) {
+	chatID, err = strconv.ParseInt(*tgParams.ChatID, 10, 64)
+	if err != nil {
+		return 0, 0, fmt.Errorf("to parse chatID: %w", err)
+	}
+	fullEvent.TgChatID = &chatID
+
+	botEvent, err := a.createBotEvent(ctx, fullEvent)
+	if err != nil {
+		a.logger.WithCtx(ctx).Warnw("Unable to create bot event", "event_id", fullEvent.ID)
+		return 0, 0, fmt.Errorf("to create bot event: %w", err)
+	}
+
+	eventCreateRequest := models.EventCreatedBotRequest{
+		TgChatID: &chatID,
+		Event:    *botEvent,
+	}
+
+	response, err := a.botAPI.EventCreated(ctx, eventCreateRequest)
+	if err != nil {
+		a.logger.WithCtx(ctx).Warnw("Unable to create bot event", "event_id", fullEvent.ID)
+		return 0, 0, fmt.Errorf("to create bot event: %w", err)
+	}
+
+	return *response.TgChatID, *response.TgMessageID, nil
+}
+
+func (a *App) onEventUpdate(ctx context.Context, eventID uuid.UUID) {
+	fullEvent, err := a.GetEvent(ctx, eventID)
+	if err != nil {
+		a.logger.WithCtx(ctx).Warnw("Unable to get event", "event_id", fullEvent.ID, "error", err)
+		return
+	}
+
+	if fullEvent.TgChatID == nil || fullEvent.TgMessageID == nil {
+		a.logger.WithCtx(ctx).Infow("Unable to update tg event, no info about chat or message", "event_id", fullEvent.ID)
+		return
+	}
+
+	botEvent, err := a.createBotEvent(ctx, fullEvent)
+	if err != nil {
+		a.logger.WithCtx(ctx).Warnw("Unable to create bot event", "event_id", fullEvent.ID, "error", err)
+		return
 	}
 
 	eventUpdated := models.EventUpdatedBotRequest{
-		Event: *botEvent,
+		TgChatID:    fullEvent.TgChatID,
+		TgMessageID: fullEvent.TgMessageID,
+		Event:       *botEvent,
 	}
 
 	err = a.botAPI.EventUpdated(ctx, eventUpdated)
 	if err != nil {
-		return fmt.Errorf("to send event updated: %w", err)
+		a.logger.WithCtx(ctx).Warnw("Unable to send event updated", "event_id", fullEvent.ID, "error", err)
+		return
 	}
-
-	return nil
 }
 
-func (a *App) onEventDelete(ctx context.Context, eventID uuid.UUID) error {
-	eventDeleted := models.EventDeletedBotRequest{
-		EventID: eventID,
-	}
-
-	err := a.botAPI.EventDeleted(ctx, eventDeleted)
+func (a *App) onEventDelete(ctx context.Context, eventID uuid.UUID) {
+	fullEvent, err := a.GetEvent(ctx, eventID)
 	if err != nil {
-		return fmt.Errorf("to send event deleted: %w", err)
+		a.logger.WithCtx(ctx).Warnw("Unable to get event", "event_id", fullEvent.ID, "error", err)
+		return
 	}
 
-	return nil
+	if fullEvent.TgChatID == nil || fullEvent.TgMessageID == nil {
+		a.logger.WithCtx(ctx).Infow("Unable to delete tg event, no info about chat or message", "event_id", fullEvent.ID)
+		return
+	}
+
+	eventDeleted := models.EventDeletedBotRequest{
+		TgChatID:    fullEvent.TgChatID,
+		TgMessageID: fullEvent.TgMessageID,
+		EventID:     eventID,
+	}
+
+	err = a.botAPI.EventDeleted(ctx, eventDeleted)
+	if err != nil {
+		a.logger.WithCtx(ctx).Warnw("Unable to send event deleted", "event_id", fullEvent.ID, "error", err)
+		return
+	}
 }
 
 func (a *App) getDefaultEventPhoto(sportType models.SportType) string {
@@ -240,36 +297,20 @@ func (a *App) CreateEventSite(ctx context.Context, request *models.RequestEventC
 		result.URLPhotos = []string{defaultPhoto}
 	}
 
+	if request.Tg != nil {
+		a.logger.WithCtx(ctx).Infow("Creating tg event", "event_id", result.ID)
+
+		chatID, messageID, err := a.onEventCreate(ctx, request.Tg, result)
+		if err != nil {
+			a.logger.WithCtx(ctx).Warnw("Unable to create bot event", "event_id", result.ID, "error", err)
+		}
+		result.TgChatID = &chatID
+		result.TgMessageID = &messageID
+	}
+
 	err := a.eventStorage.CreateEvent(ctx, result)
 	if err != nil {
 		return nil, fmt.Errorf("to create event: %w", err)
-	}
-
-	if request.Tg != nil {
-		a.logger.WithCtx(ctx).Infow("Creating tg event", "event_id", result.ID, "error", err)
-
-		chatID, err := strconv.ParseInt(*request.Tg.ChatID, 10, 64)
-		if err != nil {
-			return nil, fmt.Errorf("to parse chatID: %w", err)
-		}
-
-		botEvent, err := a.getBotEvent(ctx, result.ID)
-		if err != nil {
-			a.logger.WithCtx(ctx).Warnw("Unable to get bot event", "event_id", result.ID, "error", err)
-			return result, nil
-		}
-
-		eventCreateRequest := models.EventCreatedBotRequest{
-			TgChatID: &chatID,
-			// TgUserID: request.Tg.UserID,
-			Event: *botEvent,
-		}
-
-		err = a.botAPI.EventCreated(ctx, eventCreateRequest)
-		if err != nil {
-			a.logger.WithCtx(ctx).Warnw("Unable to create bot event", "event_id", result.ID, "error", err)
-			return result, nil
-		}
 	}
 
 	return result, nil
@@ -339,10 +380,7 @@ func (a *App) EditEventSite(ctx context.Context, request *models.RequestEventEdi
 	preResult.IsFree = eventFromDB.IsFree
 	preResult.RawMessage = eventFromDB.RawMessage
 
-	err = a.onEventUpdate(ctx, preResult.ID)
-	if err != nil {
-		a.logger.WithCtx(ctx).Warnw("Unable to update bot event", "event_id", preResult.ID, "error", err)
-	}
+	a.onEventUpdate(ctx, preResult.ID)
 
 	return preResult, nil
 }
@@ -359,14 +397,11 @@ func (a *App) DeleteEvent(ctx context.Context, userID uuid.UUID, eventID uuid.UU
 		return ErrForbiddenDeleteNotYourEvent
 	}
 
+	a.onEventDelete(ctx, eventID)
+
 	err = a.eventStorage.DeleteEvent(ctx, userID, eventID)
 	if err != nil {
 		return fmt.Errorf("to delete event: %w", err)
-	}
-
-	err = a.onEventDelete(ctx, eventID)
-	if err != nil {
-		a.logger.WithCtx(ctx).Warnw("Unable to deleted bot event", "event_id", eventID, "error", err)
 	}
 
 	return nil
@@ -402,6 +437,34 @@ func (a *App) GetEvent(ctx context.Context, id uuid.UUID) (*models.FullEvent, er
 	return a.eventStorage.GetEvent(ctx, id)
 }
 
+func (a *App) SubscribeEventFromTg(ctx context.Context, tgChatID, tgMessageID, tgUserID int64) (*models.ResponseSubscribeEvent, error) {
+	userFullFromTgID, err := a.authStorage.GetUserFullByTgID(ctx, tgUserID)
+	if err != nil {
+		return nil, fmt.Errorf("to get user full by tg id: %w", err)
+	}
+
+	fullEvent, err := a.eventStorage.GetEventByTgChatAndMessageIDs(ctx, tgChatID, tgMessageID)
+	if err != nil {
+		return nil, fmt.Errorf("to get event by tg chat and message ids: %w", err)
+	}
+
+	userIsSubscribed := false
+	for _, subscriber := range fullEvent.Subscribers {
+		if subscriber == userFullFromTgID.ID {
+			userIsSubscribed = true
+		}
+	}
+
+	responseSubscribeEvent, err := a.eventStorage.SubscribeEvent(ctx, fullEvent.ID, userFullFromTgID.ID, !userIsSubscribed)
+	if err != nil {
+		return nil, fmt.Errorf("to subscribe event: %w", err)
+	}
+
+	a.onEventUpdate(ctx, responseSubscribeEvent.ID)
+
+	return responseSubscribeEvent, nil
+}
+
 func (a *App) SubscribeEvent(ctx context.Context, id uuid.UUID, userID *uuid.UUID, tgID *int64, subscribe bool) (*models.ResponseSubscribeEvent, error) {
 	if userID == nil && tgID != nil {
 		userFullFromTgID, err := a.authStorage.GetUserFullByTgID(ctx, *tgID)
@@ -416,10 +479,7 @@ func (a *App) SubscribeEvent(ctx context.Context, id uuid.UUID, userID *uuid.UUI
 		return nil, fmt.Errorf("to subscribe event: %w", err)
 	}
 
-	err = a.onEventUpdate(ctx, responseSubscribeEvent.ID)
-	if err != nil {
-		a.logger.WithCtx(ctx).Warnw("Unable to update bot event", "event_id", responseSubscribeEvent.ID, "error", err)
-	}
+	a.onEventUpdate(ctx, responseSubscribeEvent.ID)
 
 	return responseSubscribeEvent, nil
 }

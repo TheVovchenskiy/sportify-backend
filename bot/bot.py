@@ -7,6 +7,7 @@ import httpx
 from aiohttp import web
 from models.event import (
     EventCreatedRequest,
+    EventCreatedResponse,
     EventDeletedRequest,
     EventMessage,
     EventUpdatedRequest,
@@ -45,17 +46,8 @@ async def subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     await query.answer()
 
-    target_event_id = None
-
-    for event_id, message in event_id_to_message_id.items():
-        if message.message.id == query.message.id:
-            target_event_id = event_id
-            break
-
-    if target_event_id is None:
-        LOGGER.info(f"No event found for message {query.message.id}")
-        return
-
+    message_id = query.message.id
+    chat_id = query.message.chat.id
     user_id = query.from_user.id
     username = query.from_user.username
     LOGGER.info(
@@ -78,38 +70,42 @@ async def subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     LOGGER.info(
         "Creating tg user if needed successful, ("
-        f"user_id = {user_id}"
-        f"username = {username}"
+        f"message_id = {message_id}, "
+        f"chat_id = {chat_id}, "
+        f"user_id = {user_id}, "
+        f"username = {username}, "
         ")"
     )
 
-    is_subscribed_response = httpx.get(
-        f"http://0.0.0.0:8090/api/v1/events/{target_event_id}/subscribers?tg_id={query.from_user.id}",
-    )
-
-    LOGGER.info(f"Is subscribed response: {is_subscribed_response.json()}")
-
-    if "is_subscribed" not in is_subscribed_response.json():
-        LOGGER.error(
-            f"Failed to check if user {query.from_user.id} is subscribed to event {target_event_id}, error: {is_subscribed_response.text}"
-        )
-        return
-
     resp = httpx.put(
-        f"http://0.0.0.0:8090/api/v1/events/{target_event_id}/subscribers",
+        f"http://0.0.0.0:8090/api/v1/tg/subscribe",
         json={
-            "sub": not is_subscribed_response.json()["is_subscribed"],
-            "tg_id": query.from_user.id,
+            "tg_user_id": user_id,
+            "tg_chat_id": chat_id,
+            "tg_message_id": message_id,
         },
     )
 
     LOGGER.info(f"Subscribe response: {resp.json()}")
 
     if 200 <= resp.status_code < 300:
-        LOGGER.info(f"Successfully subscribed/unsubscribed to event {target_event_id}")
+        LOGGER.info(
+            "Successfully subscribed/unsubscribed to event ("
+            f"message_id = {message_id}, "
+            f"chat_id = {chat_id}, "
+            f"user_id = {user_id}, "
+            f"username = {username}, "
+            ")"
+        )
     else:
         LOGGER.error(
-            f"Failed to subscribe/unsubscribe to event {target_event_id}, error: {resp.text}"
+            "Failed to subscribe/unsubscribe to event "
+            f"message_id = {message_id}, "
+            f"chat_id = {chat_id}, "
+            f"user_id = {user_id}, "
+            f"username = {username}, "
+            f"error = {resp.text}, "
+            ")"
         )
 
 
@@ -264,15 +260,12 @@ async def handle_event_created(request: web.Request) -> web.Response:
                 parse_mode=ParseMode.MARKDOWN_V2,
                 reply_markup=InlineKeyboardMarkup(keyboard),
             )
-            event_id_to_message_id[erm.event.id] = EventMessage(
-                event=erm.event,
-                message=message,
-            )
+            response = EventCreatedResponse(int(erm.tg_chat_id), message.id)
         except Exception as e:
             LOGGER.exception(f"Error sending message to chat {erm.tg_chat_id}")
             return web.json_response({"status": "fail", "reason": str(e)}, status=500)
 
-        return web.json_response({"status": "success"})
+        return web.json_response(response.to_dict())
     except Exception as e:
         LOGGER.exception(f"Error handling event creation")
         return web.json_response(
@@ -296,14 +289,6 @@ async def handle_event_updated(request: web.Request) -> web.Response:
             LOGGER.exception(f"Error parsing request data {data}")
             return web.json_response({"status": "fail", "reason": str(e)}, status=400)
 
-        if erm.event.id not in event_id_to_message_id:
-            LOGGER.info(f"Event {erm.event.id} not found")
-            return web.json_response(
-                {"status": "fail", "reason": "Event not found"}, status=404
-            )
-
-        erm_old = event_id_to_message_id[erm.event.id]
-
         try:
             new_message = str(erm.event)
         except Exception as e:
@@ -321,15 +306,25 @@ async def handle_event_updated(request: web.Request) -> web.Response:
             ]
 
             await bot_application.bot.edit_message_caption(
-                chat_id=erm_old.message.chat.id,
+                chat_id=erm.tg_chat_id,
                 caption=new_message,
-                message_id=erm_old.message.id,
+                message_id=erm.tg_message_id,
                 parse_mode=ParseMode.MARKDOWN_V2,
                 reply_markup=InlineKeyboardMarkup(keyboard),
             )
         except Exception as e:
             LOGGER.exception(f"Error editing event {erm.event.id!r}")
             return web.json_response({"status": "fail", "reason": str(e)}, status=500)
+
+        for user in erm.event.subscribers:
+            if user.tg_id:
+                try:
+                    await bot_application.bot.send_message(
+                        user.tg_id,
+                        f"Cобытие было изменено: https://move-life.ru/events/{erm.event.id}",
+                    )
+                except Exception as e:
+                    LOGGER.exception(f"Error sending message to user {user.id!r}")
 
         return web.json_response({"status": "success"})
     except Exception as e:
@@ -355,18 +350,10 @@ async def handle_event_deleted(request: web.Request) -> web.Response:
             LOGGER.exception(f"Error parsing request data {data}")
             return web.json_response({"status": "fail", "reason": str(e)}, status=400)
 
-        if erm.event_id not in event_id_to_message_id:
-            LOGGER.info(f"Event {erm.event_id} not found")
-            return web.json_response(
-                {"status": "fail", "reason": "Event not found"}, status=404
-            )
-
-        erm_old = event_id_to_message_id[erm.event_id]
-
         try:
             await bot_application.bot.delete_message(
-                chat_id=erm_old.message.chat.id,
-                message_id=erm_old.message.id,
+                chat_id=erm.tg_chat_id,
+                message_id=erm.tg_message_id,
             )
         except Exception as e:
             LOGGER.exception(f"Error deleting event {erm.event_id!r}")
@@ -391,7 +378,6 @@ def main() -> None:
     asyncio.set_event_loop(loop)
 
     bot_application.add_handler(CommandHandler("start", start))
-    # bot_application.add_handler(CommandHandler("test", test))
     bot_application.add_handler(CallbackQueryHandler(subscribe))
     bot_application.add_handler(CommandHandler("help", help_command))
 

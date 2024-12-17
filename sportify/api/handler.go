@@ -33,6 +33,7 @@ type App interface {
 	GetEvents(ctx context.Context) ([]models.ShortEvent, error)
 	FindEvents(ctx context.Context, filterParams *models.FilterParams) ([]models.ShortEvent, error)
 	GetEvent(ctx context.Context, id uuid.UUID) (*models.FullEvent, error)
+	SubscribeEventFromTg(ctx context.Context, tgChatID, tgMessageID, tgUserID int64) (*models.ResponseSubscribeEvent, error)
 	SubscribeEvent(
 		ctx context.Context,
 		id uuid.UUID,
@@ -524,6 +525,54 @@ func (h *Handler) GetEvent(w http.ResponseWriter, r *http.Request) {
 	eventAPI := models.MapFullEventToAPI(event, userAPI, subscribersAPI)
 
 	models.WriteJSONResponse(w, eventAPI)
+}
+
+func (h *Handler) handleSubscribeEventFromTgError(ctx context.Context, w http.ResponseWriter, errOutside error) {
+	h.logger.WithCtx(ctx).Error(errOutside)
+
+	switch {
+	case errors.Is(errOutside, db.ErrNotFoundEvent):
+		models.WriteResponseError(w, models.NewResponseNotFoundErr("", db.ErrNotFoundEvent.Error()))
+	// case errors.Is(errOutside, api.ErrInvalidUUID):
+	// 	models.WriteResponseError(w, models.NewResponseBadRequestErr("", errOutside.Error()))
+	case errors.Is(errOutside, ErrRequestSubscribeEvent):
+		models.WriteResponseError(w, models.NewResponseBadRequestErr("", errOutside.Error()))
+	case errors.Is(errOutside, models.ErrAllBusy):
+		models.WriteResponseError(w, models.NewResponseBadRequestErr("", models.ErrAllBusy.Error()))
+	case errors.Is(errOutside, models.ErrFoundSubscriber):
+		models.WriteResponseError(w, models.NewResponseBadRequestErr("", models.ErrFoundSubscriber.Error()))
+	case errors.Is(errOutside, models.ErrNotFoundSubscriber):
+		models.WriteResponseError(w, models.NewResponseBadRequestErr("", models.ErrNotFoundSubscriber.Error()))
+	default:
+		models.WriteResponseError(w, models.NewResponseInternalServerErr("", models.InternalServerErrMessage))
+	}
+}
+
+func (h *Handler) SubscribeEventFromTg(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	reqBody, err := io.ReadAll(r.Body)
+	if err != nil {
+		h.handleSubscribeEventError(ctx, w, err)
+		return
+	}
+
+	var reqSubEvent models.SubscribeEventFromTgRequest
+	err = json.Unmarshal(reqBody, &reqSubEvent)
+	if err != nil {
+		err = fmt.Errorf("%w: %s", ErrRequestSubscribeEvent, err.Error())
+
+		h.handleSubscribeEventError(ctx, w, err)
+		return
+	}
+
+	responseSubscribeEvent, err := h.app.SubscribeEventFromTg(ctx, reqSubEvent.TgChatID, reqSubEvent.TgMessageID, reqSubEvent.TgUserID)
+	if err != nil {
+		h.handleSubscribeEventFromTgError(ctx, w, err)
+		return
+	}
+
+	models.WriteJSONResponse(w, responseSubscribeEvent)
 }
 
 var ErrRequestSubscribeEvent = errors.New("некорректный запрос подписки на событие")

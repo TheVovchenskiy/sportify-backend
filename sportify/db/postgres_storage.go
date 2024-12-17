@@ -28,10 +28,10 @@ func (p *PostgresStorage) CreateEvent(ctx context.Context, event *models.FullEve
 	INSERT INTO "public".event (
     id, creator_id, subscriber_ids, sport_type, address, date_start, start_time, end_time,
     price, game_level, description, raw_message, capacity, busy, creation_type,
-    url_message, url_author, url_preview, url_photos
+    url_message, url_author, url_preview, url_photos, tg_chat_id, tg_message_id
 ) VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, 
           $9, $10, $11, $12, $13, $14, $15,
-          $16, $17, $18, $19);`
+          $16, $17, $18, $19, $20, $21);`
 
 	preparedGameLevel := pq.Array(event.GameLevels)
 
@@ -39,7 +39,7 @@ func (p *PostgresStorage) CreateEvent(ctx context.Context, event *models.FullEve
 		event.ID, event.CreatorID, event.Subscribers, event.SportType, event.Address,
 		event.DateAndTime.Date, event.DateAndTime.StartTime, event.DateAndTime.EndTime, event.Price, preparedGameLevel,
 		event.Description, event.RawMessage, event.Capacity, event.Busy, event.CreationType,
-		event.URLMessage, event.URLAuthor, event.URLPreview, event.URLPhotos)
+		event.URLMessage, event.URLAuthor, event.URLPreview, event.URLPhotos, event.TgChatID, event.TgMessageID)
 	if err != nil {
 		return err
 	}
@@ -103,13 +103,54 @@ func (p *PostgresStorage) GetCreatorID(ctx context.Context, eventID uuid.UUID) (
 	return creatorID, nil
 }
 
+func (p *PostgresStorage) GetEventByTgChatAndMessageIDs(ctx context.Context, tgChatID, tgMessageID int64) (*models.FullEvent, error) {
+	sqlSelectEvent := `
+	SELECT id, creator_id, subscriber_ids, sport_type, address, date_start, start_time, end_time,
+       price, game_level, description, raw_message, capacity, busy, creation_type,
+       url_author, url_message, 
+       url_preview, url_photos,
+       ST_X(coordinates::geometry) as latitude, ST_Y(coordinates::geometry) as longitude,
+	   tg_chat_id, tg_message_id
+	FROM "public".event WHERE tg_chat_id = $1 AND $2 = tg_message_id AND deleted_at IS NULL;`
+
+	rawRow := p.pool.QueryRow(ctx, sqlSelectEvent, tgChatID, tgMessageID)
+
+	var (
+		event            models.FullEvent
+		rawSubscriberIDs pgtype.Array[uuid.UUID]
+		rawURLPhotos     pgtype.Array[string]
+		rawGameLevels    pgtype.Array[*string]
+	)
+
+	err := rawRow.Scan(&event.ID, &event.CreatorID, &rawSubscriberIDs, &event.SportType, &event.Address,
+		&event.DateAndTime.Date, &event.DateAndTime.StartTime, &event.DateAndTime.EndTime, &event.Price, &rawGameLevels,
+		&event.Description, &event.RawMessage, &event.Capacity, &event.Busy, &event.CreationType,
+		&event.URLAuthor, &event.URLMessage, &event.URLPreview, &rawURLPhotos, &event.Latitude, &event.Longitude,
+		&event.TgChatID, &event.TgMessageID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFoundEvent
+		}
+
+		return nil, fmt.Errorf("to scan event: %w", err)
+	}
+
+	event.Subscribers = rawSubscriberIDs.Elements
+	event.URLPhotos = rawURLPhotos.Elements
+	event.IsFree = *event.Price == 0
+	event.GameLevels = models.GameLevelFromRawNullable(rawGameLevels.Elements)
+
+	return &event, nil
+}
+
 func (p *PostgresStorage) GetEvent(ctx context.Context, eventID uuid.UUID) (*models.FullEvent, error) {
 	sqlSelectEvent := `
 	SELECT creator_id, subscriber_ids, sport_type, address, date_start, start_time, end_time,
        price, game_level, description, raw_message, capacity, busy, creation_type,
        url_author, url_message, 
        url_preview, url_photos,
-       ST_X(coordinates::geometry) as latitude, ST_Y(coordinates::geometry) as longitude
+       ST_X(coordinates::geometry) as latitude, ST_Y(coordinates::geometry) as longitude,
+	   tg_chat_id, tg_message_id
 	FROM "public".event WHERE id = $1 AND deleted_at IS NULL;`
 
 	rawRow := p.pool.QueryRow(ctx, sqlSelectEvent, eventID)
@@ -124,7 +165,8 @@ func (p *PostgresStorage) GetEvent(ctx context.Context, eventID uuid.UUID) (*mod
 	err := rawRow.Scan(&event.CreatorID, &rawSubscriberIDs, &event.SportType, &event.Address,
 		&event.DateAndTime.Date, &event.DateAndTime.StartTime, &event.DateAndTime.EndTime, &event.Price, &rawGameLevels,
 		&event.Description, &event.RawMessage, &event.Capacity, &event.Busy, &event.CreationType,
-		&event.URLAuthor, &event.URLMessage, &event.URLPreview, &rawURLPhotos, &event.Latitude, &event.Longitude)
+		&event.URLAuthor, &event.URLMessage, &event.URLPreview, &rawURLPhotos, &event.Latitude, &event.Longitude,
+		&event.TgChatID, &event.TgMessageID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFoundEvent
