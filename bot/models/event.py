@@ -53,7 +53,7 @@ class Event:
         if self.description:
             lines.append("")
             lines.append("📝 *Описание:*")
-            lines.append(self.description)
+            lines.append(escape_markdown(self.description, 2))
 
         if self.hashtags:
             lines.append("")
