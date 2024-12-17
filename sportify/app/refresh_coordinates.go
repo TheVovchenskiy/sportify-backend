@@ -80,11 +80,15 @@ type responseYandexAPI struct {
 }
 
 func (r *responseYandexAPI) GetCoordinates() (string, string, error) {
+	if len(r.Response.GeoObjectCollection.FeatureMember) == 0 {
+		return "", "", fmt.Errorf("yandex coordinate response with 0 result")
+	}
+
 	rawCoordinates := r.Response.GeoObjectCollection.FeatureMember[0].GeoObject.Point.Pos
 	twoCoordinates := strings.Split(rawCoordinates, " ")
 
 	if len(twoCoordinates) != 2 {
-		return "", "", fmt.Errorf("foramt yandex coordinates: %s", rawCoordinates)
+		return "", "", fmt.Errorf("format yandex coordinates: %s", rawCoordinates)
 	}
 
 	return twoCoordinates[1], twoCoordinates[0], nil
