@@ -77,6 +77,7 @@ var _ TokenStorage = (*db.MapTokenStorage)(nil)
 //go:generate mockgen -source=app.go -destination=mocks/app.go -package=mocks EventStorage
 
 type App struct {
+	yandexAPIKey         string
 	urlPrefixFile        string
 	fileStorage          FileStorage
 	eventStorage         EventStorage
@@ -91,7 +92,7 @@ type App struct {
 }
 
 func NewApp(
-	urlPrefixFile string,
+	yandexAPIKey, urlPrefixFile string,
 	fileStorage FileStorage,
 	eventStorage EventStorage,
 	authStorage AuthStorage,
@@ -102,6 +103,7 @@ func NewApp(
 	// yookassaClient YookassaClient,
 ) *App {
 	app := &App{
+		yandexAPIKey:    yandexAPIKey,
 		urlPrefixFile:   urlPrefixFile,
 		eventStorage:    eventStorage,
 		fileStorage:     fileStorage,

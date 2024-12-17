@@ -68,7 +68,7 @@ type Config struct {
 		Port          string `mapstructure:"port"`
 		APIPrefix     string `mapstructure:"api_prefix"`
 		PathPhotos    string `mapstructure:"path_photos"`
-		IAMToken      string `mapstructure:"iam_token"`
+		IAMToken      string `mapstructure:"iam_token"` // use them as YANDEX apikey
 		FolderID      string `mapstructure:"folder_id"`
 		URLPrefixFile string `mapstructure:"url_prefix_file"`
 

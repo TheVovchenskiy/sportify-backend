@@ -337,7 +337,7 @@ func (p *PostgresStorage) FindEvents(ctx context.Context, filterParams *models.F
 		return nil, fmt.Errorf("get logger: %w", err)
 	}
 
-	logger.With(ctx).Infow("Getting events", zap.Any("filter_params", filterParams))
+	logger.WithCtx(ctx).Infow("Getting events", zap.Any("filter_params", filterParams))
 
 	query := squirrel.Select(`id, creator_id, sport_type, address, date_start, start_time,
 		end_time, price, game_level, capacity, busy,

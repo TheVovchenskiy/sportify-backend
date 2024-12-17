@@ -107,7 +107,7 @@ func (s *Server) Run(ctx context.Context, configFile []string) error {
 
 	url := cfg.App.Domain + cfg.App.Port
 	appSportify := app.NewApp(
-		cfg.App.URLPrefixFile, fsStorage, postgresStorage, postgresStorage, mapTokenStorage, logger, botAPI,
+		cfg.App.IAMToken, cfg.App.URLPrefixFile, fsStorage, postgresStorage, postgresStorage, mapTokenStorage, logger, botAPI,
 	)
 
 	tgAPI := telegramapi.NewTelegramAPIDummy()
