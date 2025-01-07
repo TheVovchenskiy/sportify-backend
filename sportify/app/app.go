@@ -287,6 +287,8 @@ func (a *App) getDefaultEventPhoto(sportType models.SportType) string {
 		return result + "default_volleyball.jpg"
 	}
 
+	// TODO add default photos for another sport types
+
 	return result + "default_football.jpeg"
 }
 
