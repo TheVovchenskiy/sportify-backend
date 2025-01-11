@@ -208,7 +208,7 @@ func (s *Server) prepareAuthProviders(
 		}),
 		SecureCookies:  true,
 		TokenDuration:  time.Minute * 5,
-		CookieDuration: time.Hour * 24,
+		CookieDuration: time.Hour * 24 * 31,
 		AvatarStore:    &avatar.NoOp{},
 		DisableXSRF:    true,
 		SameSiteCookie: http.SameSiteLaxMode,
