@@ -128,7 +128,7 @@ func (h *Handler) handleCreateEventSiteError(ctx context.Context, w http.Respons
 	}
 }
 
-var ErrRequestEventCreateSite = errors.New("некорректный запрос на создание события")
+var ErrRequestEventCreateSite = errors.New("Некорректный запрос на создание события")
 
 func (h *Handler) CreateEventSite(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -185,7 +185,7 @@ func (h *Handler) handleGetUsersEvents(ctx context.Context, w http.ResponseWrite
 	}
 }
 
-var ErrRequestFilterParams = errors.New("некорректные фильтры в запросе")
+var ErrRequestFilterParams = errors.New("Некорректные фильтры в запросе")
 
 func (h *Handler) GetUsersEvents(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -322,7 +322,7 @@ func (h *Handler) handleEditEventSiteError(ctx context.Context, w http.ResponseW
 	}
 }
 
-var ErrRequestEditEventSite = errors.New("некорректный запрос на редактирование события")
+var ErrRequestEditEventSite = errors.New("Некорректный запрос на редактирование события")
 
 func (h *Handler) EditEventSite(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -462,7 +462,7 @@ func (h *Handler) FindEvents(w http.ResponseWriter, r *http.Request) {
 	models.WriteJSONResponse(w, events)
 }
 
-var ErrInvalidEventID = errors.New("не верный event id")
+var ErrInvalidEventID = errors.New("Не верный event id")
 
 func (h *Handler) handleGetEventError(ctx context.Context, w http.ResponseWriter, errOutside error) {
 	h.logger.WithCtx(ctx).Error(errOutside)
@@ -575,7 +575,7 @@ func (h *Handler) SubscribeEventFromTg(w http.ResponseWriter, r *http.Request) {
 	models.WriteJSONResponse(w, responseSubscribeEvent)
 }
 
-var ErrRequestSubscribeEvent = errors.New("некорректный запрос подписки на событие")
+var ErrRequestSubscribeEvent = errors.New("Некорректный запрос подписки на событие")
 
 func (h *Handler) handleSubscribeEventError(ctx context.Context, w http.ResponseWriter, errOutside error) {
 	h.logger.WithCtx(ctx).Error(errOutside)
@@ -644,7 +644,7 @@ func (h *Handler) SubscribeEvent(w http.ResponseWriter, r *http.Request) {
 	models.WriteJSONResponse(w, responseSubscribeEvent)
 }
 
-var ErrNoUserIDQueryParams = errors.New("не указан user_id в query params")
+var ErrNoUserIDQueryParams = errors.New("Не указан user_id в query params")
 
 func (h *Handler) handleUserIsSubscribedError(ctx context.Context, w http.ResponseWriter, errOutside error) {
 	h.logger.WithCtx(ctx).Error(errOutside)
@@ -809,7 +809,7 @@ func (h *Handler) handleTryCreateEventErr(ctx context.Context, w http.ResponseWr
 	}
 }
 
-var ErrBadRequestTgMessage = errors.New("не корректный запрос tg message")
+var ErrBadRequestTgMessage = errors.New("Не корректный запрос tg message")
 
 func (h *Handler) TryCreateEvent(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()

@@ -77,7 +77,7 @@ func (h *Handler) handleRegister(ctx context.Context, w http.ResponseWriter, err
 	}
 }
 
-var ErrRequestRegister = errors.New("не корректный запрос регистрации")
+var ErrRequestRegister = errors.New("Не корректный запрос регистрации")
 
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -203,7 +203,7 @@ func (h *Handler) handleLoginFromTg(ctx context.Context, w http.ResponseWriter, 
 	}
 }
 
-var ErrRequestLoginFromTg = errors.New("не корректный запрос на логин из тг")
+var ErrRequestLoginFromTg = errors.New("Не корректный запрос на логин из тг")
 
 func (h *Handler) LoginUserFromTg(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()

@@ -127,7 +127,7 @@ func (p *PostgresStorage) CheckUsernameExists(ctx context.Context, username stri
 	return true, nil
 }
 
-var ErrUserNotFound = errors.New("не найден пользователь")
+var ErrUserNotFound = errors.New("Не найден пользователь")
 
 func (p *PostgresStorage) GetPasswordByUsername(ctx context.Context, username string) (*string, error) {
 	sqlSelect := `SELECT password FROM "public".user WHERE username = $1;`

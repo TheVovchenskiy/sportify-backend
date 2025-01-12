@@ -79,7 +79,7 @@ func (h *Handler) handleUpdateProfile(ctx context.Context, w http.ResponseWriter
 	}
 }
 
-var ErrRequestUpdateProfile = errors.New("не корректный запрос на обновление")
+var ErrRequestUpdateProfile = errors.New("Не корректный запрос на обновление")
 
 func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()

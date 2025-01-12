@@ -21,7 +21,7 @@ type PostgresStorage struct {
 	pool *pgxpool.Pool
 }
 
-var ErrEventAlreadyExist = errors.New("событие уже существует")
+var ErrEventAlreadyExist = errors.New("Событие уже существует")
 
 func (p *PostgresStorage) CreateEvent(ctx context.Context, event *models.FullEvent) error {
 	sqlInsertEvent := `
@@ -81,7 +81,7 @@ func (p *PostgresStorage) DeleteEvent(ctx context.Context, userID, eventID uuid.
 	return nil
 }
 
-var ErrNotFoundEvent = errors.New("не найдено событие")
+var ErrNotFoundEvent = errors.New("Не найдено событие")
 
 func (p *PostgresStorage) GetCreatorID(ctx context.Context, eventID uuid.UUID) (uuid.UUID, error) {
 	sqlSelectEvent := `

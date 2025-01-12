@@ -25,7 +25,7 @@ func hashContent(content []byte) (string, error) {
 	return hex.EncodeToString(result), nil
 }
 
-var ErrWrongFormat = errors.New("формат файла должен быть png или jpeg")
+var ErrWrongFormat = errors.New("Формат файла должен быть png или jpeg")
 
 func (a *App) SaveImage(ctx context.Context, file []byte) (string, error) {
 
