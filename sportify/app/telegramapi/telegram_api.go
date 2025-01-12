@@ -39,7 +39,7 @@ func (t *TelegramAPIDummy) AddUpdate(update *models.TgUpdateWrapper) {
 	t.updatesStorage = append(t.updatesStorage, update)
 }
 
-var ErrNoResult = errors.New("no result")
+var ErrNoResult = errors.New("No result")
 
 func (t *TelegramAPIDummy) getResult(chatID int) error {
 	t.muResults.Lock()

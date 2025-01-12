@@ -29,7 +29,7 @@ func (h *Handler) handlePayEventError(ctx context.Context, w http.ResponseWriter
 	}
 }
 
-var ErrRequestEventPay = errors.New("некорректный запрос на оплату события")
+var ErrRequestEventPay = errors.New("Некорректный запрос на оплату события")
 
 func (h *Handler) PayEvent(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()

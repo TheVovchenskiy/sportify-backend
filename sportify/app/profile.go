@@ -19,7 +19,7 @@ func (a *App) GetUserFullByUserID(ctx context.Context, userID uuid.UUID) (*model
 	return userFull, nil
 }
 
-var ErrValidationRequestUpdateProfile = errors.New("не правильные параметры")
+var ErrValidationRequestUpdateProfile = errors.New("Неправильные параметры")
 
 func (a *App) UpdateProfile(ctx context.Context, userID uuid.UUID, reqUpdate models.RequestUpdateProfile) error {
 	err := reqUpdate.Valid()

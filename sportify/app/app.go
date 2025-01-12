@@ -320,7 +320,7 @@ func (a *App) CreateEventSite(ctx context.Context, request *models.RequestEventC
 	return result, nil
 }
 
-var ErrForbiddenEditNotYourEvent = errors.New("вы не можете изменять не свое событие")
+var ErrForbiddenEditNotYourEvent = errors.New("Вы не можете изменять не свое событие")
 
 func (a *App) EditEventSite(ctx context.Context, request *models.RequestEventEditSite) (*models.FullEvent, error) {
 	eventFromDB, err := a.eventStorage.GetEvent(ctx, request.EventID)
@@ -389,7 +389,7 @@ func (a *App) EditEventSite(ctx context.Context, request *models.RequestEventEdi
 	return preResult, nil
 }
 
-var ErrForbiddenDeleteNotYourEvent = errors.New("вы не можете удалять чужое событие")
+var ErrForbiddenDeleteNotYourEvent = errors.New("Вы не можете удалять чужое событие")
 
 func (a *App) DeleteEvent(ctx context.Context, userID uuid.UUID, eventID uuid.UUID) error {
 	creatorID, err := a.eventStorage.GetCreatorID(ctx, eventID)
@@ -511,7 +511,7 @@ func (a *App) UserIsSubscribed(ctx context.Context, eventID uuid.UUID, reqParams
 	return false, nil
 }
 
-var ErrPayFree = errors.New("вы не можете оплатить бесплатное событие")
+var ErrPayFree = errors.New("Вы не можете оплатить бесплатное событие")
 
 func (a *App) PayEvent(ctx context.Context, request *models.RequestEventPay) (*models.ResponseEventPay, error) {
 	fullEvent, err := a.GetEvent(ctx, request.EventID)

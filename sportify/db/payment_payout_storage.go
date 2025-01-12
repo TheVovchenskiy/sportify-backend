@@ -35,7 +35,7 @@ func (p *PostgresPaymentPayoutStorage) CreatePayment(ctx context.Context, paymen
 	return nil
 }
 
-var ErrNotFoundPayment = errors.New("платеж не найден")
+var ErrNotFoundPayment = errors.New("Платеж не найден")
 
 func (p *PostgresPaymentPayoutStorage) GetPayment(ctx context.Context, id uuid.UUID) (*models.Payment, error) {
 	var result models.Payment

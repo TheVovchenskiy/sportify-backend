@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-var ErrTimeout = fmt.Errorf("timeout")
+var ErrTimeout = fmt.Errorf("Timeout")
 
 // Timeout executes the function f with a timeout.
 func Timeout(timeout time.Duration, f func() error) error {

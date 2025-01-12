@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
-var ErrInvalidUUID = errors.New("не верный uuid")
+var ErrInvalidUUID = errors.New("Неверный uuid")
 
 func GetUUID(r *http.Request, param string) (uuid.UUID, error) {
 	preUUID := chi.URLParam(r, param)
