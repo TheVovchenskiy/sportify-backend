@@ -62,7 +62,7 @@ func ConvertLoginResponseToCheck(checkHandler CheckHandler, prev http.Handler) h
 
 var mapErrReplace = map[string]string{
 	"Unauthorized\n":             "Вы не авторизованы",
-	"incorrect user or password": "Не верный логин или пароль",
+	"incorrect user or password": "Неверный логин или пароль",
 
 	// from telegram check token
 	"request is not found":        "Произошла какая-то ошибка авторизации, попробуйте снова",

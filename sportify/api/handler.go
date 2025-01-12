@@ -462,7 +462,7 @@ func (h *Handler) FindEvents(w http.ResponseWriter, r *http.Request) {
 	models.WriteJSONResponse(w, events)
 }
 
-var ErrInvalidEventID = errors.New("Не верный event id")
+var ErrInvalidEventID = errors.New("Неверный event id")
 
 func (h *Handler) handleGetEventError(ctx context.Context, w http.ResponseWriter, errOutside error) {
 	h.logger.WithCtx(ctx).Error(errOutside)
@@ -809,7 +809,7 @@ func (h *Handler) handleTryCreateEventErr(ctx context.Context, w http.ResponseWr
 	}
 }
 
-var ErrBadRequestTgMessage = errors.New("Не корректный запрос tg message")
+var ErrBadRequestTgMessage = errors.New("Некорректный запрос tg message")
 
 func (h *Handler) TryCreateEvent(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
