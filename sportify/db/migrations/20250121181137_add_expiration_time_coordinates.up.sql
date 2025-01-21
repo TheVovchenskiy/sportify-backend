@@ -1,0 +1,2 @@
+ALTER TABLE IF EXISTS event ADD COLUMN IF NOT EXISTS expiration_time_coordinates
+    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW() + interval '29' day;

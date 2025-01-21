@@ -24,7 +24,6 @@ type EventStorage interface {
 	CreateEvent(ctx context.Context, event *models.FullEvent) error
 	EditEvent(ctx context.Context, event *models.FullEvent) error
 	DeleteEvent(ctx context.Context, userID, eventID uuid.UUID) error
-	GetEvents(ctx context.Context) ([]models.ShortEvent, error)
 	GetCreatorID(ctx context.Context, eventID uuid.UUID) (uuid.UUID, error)
 	FindEvents(ctx context.Context, filterParams *models.FilterParams) ([]models.ShortEvent, error)
 	GetEvent(ctx context.Context, id uuid.UUID) (*models.FullEvent, error)
@@ -33,8 +32,6 @@ type EventStorage interface {
 	AddUserPaid(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
 	SetCoordinates(ctx context.Context, latitude, longitude string, id uuid.UUID) error
 }
-
-//var _ EventStorage = (*db.SimpleEventStorage)(nil)
 
 var _ EventStorage = (*db.PostgresStorage)(nil)
 
@@ -89,6 +86,7 @@ type App struct {
 	logger               *mylogger.MyLogger
 	muFindByAddress      *sync.Mutex
 	botAPI               BotAPI
+	queueCoordinates     *queueCoordinates
 }
 
 func NewApp(
@@ -103,16 +101,17 @@ func NewApp(
 	// yookassaClient YookassaClient,
 ) *App {
 	app := &App{
-		yandexAPIKey:    yandexAPIKey,
-		urlPrefixFile:   urlPrefixFile,
-		eventStorage:    eventStorage,
-		fileStorage:     fileStorage,
-		authStorage:     authStorage,
-		httpClient:      http.DefaultClient,
-		tokenStorage:    tokenStorage,
-		logger:          logger,
-		muFindByAddress: &sync.Mutex{},
-		botAPI:          botAPI,
+		yandexAPIKey:     yandexAPIKey,
+		urlPrefixFile:    urlPrefixFile,
+		eventStorage:     eventStorage,
+		fileStorage:      fileStorage,
+		authStorage:      authStorage,
+		httpClient:       http.DefaultClient,
+		tokenStorage:     tokenStorage,
+		logger:           logger,
+		muFindByAddress:  &sync.Mutex{},
+		botAPI:           botAPI,
+		queueCoordinates: &queueCoordinates{idsInQueue: make(map[uuid.UUID]struct{})},
 		// paymentPayoutStorage: paymentPayoutStorage,
 		// yookassaClient:       yookassaClient,
 	}
@@ -128,6 +127,17 @@ func NewApp(
 	}()
 
 	return app
+}
+
+type coordinates struct {
+	ID      uuid.UUID
+	Address string
+}
+
+type queueCoordinates struct {
+	queue      []coordinates
+	idsInQueue map[uuid.UUID]struct{}
+	mu         sync.RWMutex
 }
 
 var (
@@ -149,6 +159,8 @@ func (a *App) CreateEventTg(ctx context.Context, fullEvent *models.FullEvent) (*
 	if err != nil {
 		return nil, fmt.Errorf("to create event: %w", err)
 	}
+
+	a.addInQueueRefreshCoordinatesIfExpired(&fullEvent.ShortEvent)
 
 	return fullEvent, nil
 }
@@ -328,6 +340,8 @@ func (a *App) CreateEventSite(ctx context.Context, request *models.RequestEventC
 		return nil, fmt.Errorf("to create event: %w", err)
 	}
 
+	a.addInQueueRefreshCoordinatesIfExpired(&result.ShortEvent)
+
 	return result, nil
 }
 
@@ -422,10 +436,6 @@ func (a *App) DeleteEvent(ctx context.Context, userID uuid.UUID, eventID uuid.UU
 	return nil
 }
 
-func (a *App) GetEvents(ctx context.Context) ([]models.ShortEvent, error) {
-	return a.eventStorage.GetEvents(ctx)
-}
-
 func (a *App) FindEvents(ctx context.Context, filterParams *models.FilterParams) ([]models.ShortEvent, error) {
 	if filterParams.Address != "" {
 		func() {
@@ -442,14 +452,41 @@ func (a *App) FindEvents(ctx context.Context, filterParams *models.FilterParams)
 
 			time.Sleep(time.Millisecond * 1100)
 		}()
-
 	}
 
-	return a.eventStorage.FindEvents(ctx, filterParams)
+	events, err := a.eventStorage.FindEvents(ctx, filterParams)
+	if err != nil {
+		return nil, fmt.Errorf("to find events: %w", err)
+	}
+
+	for _, event := range events {
+		a.addInQueueRefreshCoordinatesIfExpired(&event)
+	}
+
+	return events, nil
+}
+
+func (a *App) addInQueueRefreshCoordinatesIfExpired(event *models.ShortEvent) {
+	if event.ExpirationTimeCoordinates.Before(time.Now()) {
+		func() {
+			a.queueCoordinates.mu.Lock()
+			defer a.queueCoordinates.mu.Unlock()
+
+			a.queueCoordinates.queue = append(a.queueCoordinates.queue, coordinates{ID: event.ID, Address: event.Address})
+			a.queueCoordinates.idsInQueue[event.ID] = struct{}{}
+		}()
+	}
 }
 
 func (a *App) GetEvent(ctx context.Context, id uuid.UUID) (*models.FullEvent, error) {
-	return a.eventStorage.GetEvent(ctx, id)
+	event, err := a.eventStorage.GetEvent(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("to get event: %w", err)
+	}
+
+	a.addInQueueRefreshCoordinatesIfExpired(&event.ShortEvent)
+
+	return event, nil
 }
 
 func (a *App) SubscribeEventFromTg(ctx context.Context, tgChatID, tgMessageID, tgUserID int64) (*models.ResponseSubscribeEvent, error) {

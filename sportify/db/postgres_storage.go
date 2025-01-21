@@ -4,10 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/Masterminds/squirrel"
 	"github.com/TheVovchenskiy/sportify-backend/models"
 	"github.com/TheVovchenskiy/sportify-backend/pkg/mylogger"
-
-	"github.com/Masterminds/squirrel"
 	"github.com/go-park-mail-ru/2023_2_Rabotyagi/pkg/repository"
 	"github.com/google/uuid"
 	pgx "github.com/jackc/pgx/v5"
@@ -110,7 +109,7 @@ func (p *PostgresStorage) GetEventByTgChatAndMessageIDs(ctx context.Context, tgC
        url_author, url_message, 
        url_preview, url_photos,
        ST_X(coordinates::geometry) as latitude, ST_Y(coordinates::geometry) as longitude,
-	   tg_chat_id, tg_message_id
+	   tg_chat_id, tg_message_id, expiration_time_coordinates
 	FROM "public".event WHERE tg_chat_id = $1 AND $2 = tg_message_id AND deleted_at IS NULL;`
 
 	rawRow := p.pool.QueryRow(ctx, sqlSelectEvent, tgChatID, tgMessageID)
@@ -126,7 +125,7 @@ func (p *PostgresStorage) GetEventByTgChatAndMessageIDs(ctx context.Context, tgC
 		&event.DateAndTime.Date, &event.DateAndTime.StartTime, &event.DateAndTime.EndTime, &event.Price, &rawGameLevels,
 		&event.Description, &event.RawMessage, &event.Capacity, &event.Busy, &event.CreationType,
 		&event.URLAuthor, &event.URLMessage, &event.URLPreview, &rawURLPhotos, &event.Latitude, &event.Longitude,
-		&event.TgChatID, &event.TgMessageID)
+		&event.TgChatID, &event.TgMessageID, &event.ExpirationTimeCoordinates)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFoundEvent
@@ -150,7 +149,7 @@ func (p *PostgresStorage) GetEvent(ctx context.Context, eventID uuid.UUID) (*mod
        url_author, url_message, 
        url_preview, url_photos,
        ST_X(coordinates::geometry) as latitude, ST_Y(coordinates::geometry) as longitude,
-	   tg_chat_id, tg_message_id
+	   tg_chat_id, tg_message_id, expiration_time_coordinates
 	FROM "public".event WHERE id = $1 AND deleted_at IS NULL;`
 
 	rawRow := p.pool.QueryRow(ctx, sqlSelectEvent, eventID)
@@ -166,7 +165,7 @@ func (p *PostgresStorage) GetEvent(ctx context.Context, eventID uuid.UUID) (*mod
 		&event.DateAndTime.Date, &event.DateAndTime.StartTime, &event.DateAndTime.EndTime, &event.Price, &rawGameLevels,
 		&event.Description, &event.RawMessage, &event.Capacity, &event.Busy, &event.CreationType,
 		&event.URLAuthor, &event.URLMessage, &event.URLPreview, &rawURLPhotos, &event.Latitude, &event.Longitude,
-		&event.TgChatID, &event.TgMessageID)
+		&event.TgChatID, &event.TgMessageID, &event.ExpirationTimeCoordinates)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFoundEvent
@@ -274,7 +273,7 @@ func getSQLEvents(rawRows pgx.Rows) ([]models.ShortEvent, error) {
 			&curEvent.ID, &curEvent.CreatorID, &curEvent.SportType, &curEvent.Address, &curEvent.DateAndTime.Date,
 			&curEvent.DateAndTime.StartTime, &curEvent.DateAndTime.EndTime, &curEvent.Price, &rawGameLevels,
 			&curEvent.Capacity, &curEvent.Busy, &curEvent.Subscribers,
-			&curEvent.URLPreview, &photoURLs, &curEvent.Latitude, &curEvent.Longitude,
+			&curEvent.URLPreview, &photoURLs, &curEvent.Latitude, &curEvent.Longitude, &curEvent.ExpirationTimeCoordinates,
 		},
 		func() error {
 			result = append(
@@ -288,16 +287,17 @@ func getSQLEvents(rawRows pgx.Rows) ([]models.ShortEvent, error) {
 						StartTime: curEvent.DateAndTime.StartTime,
 						EndTime:   curEvent.DateAndTime.EndTime,
 					},
-					Price:       curEvent.Price,
-					IsFree:      *curEvent.Price == 0,
-					GameLevels:  models.GameLevelFromRawNullable(rawGameLevels.Elements),
-					Capacity:    curEvent.Capacity,
-					Busy:        curEvent.Busy,
-					Subscribers: curEvent.Subscribers,
-					URLPreview:  curEvent.URLPreview,
-					URLPhotos:   photoURLs.Elements,
-					Latitude:    curEvent.Latitude,
-					Longitude:   curEvent.Longitude,
+					Price:                     curEvent.Price,
+					IsFree:                    *curEvent.Price == 0,
+					GameLevels:                models.GameLevelFromRawNullable(rawGameLevels.Elements),
+					Capacity:                  curEvent.Capacity,
+					Busy:                      curEvent.Busy,
+					Subscribers:               curEvent.Subscribers,
+					URLPreview:                curEvent.URLPreview,
+					URLPhotos:                 photoURLs.Elements,
+					Latitude:                  curEvent.Latitude,
+					Longitude:                 curEvent.Longitude,
+					ExpirationTimeCoordinates: curEvent.ExpirationTimeCoordinates,
 				})
 
 			return nil
@@ -313,23 +313,6 @@ func getSQLEvents(rawRows pgx.Rows) ([]models.ShortEvent, error) {
 	return result, nil
 }
 
-func (p *PostgresStorage) GetEvents(ctx context.Context) ([]models.ShortEvent, error) {
-	sqlSelect := `
-	SELECT id, creator_id, sport_type, address, date_start, start_time,
-       end_time, price, game_level, capacity, busy,
-       subscriber_ids, url_preview, url_photos,
-       ST_X(coordinates::geometry) as latitude, ST_Y(coordinates::geometry) as longitude
-	FROM "public".event WHERE deleted_at IS NULL AND start_time > NOW() - INTERVAL '1 day'
-	ORDER BY start_time;`
-
-	rawRows, err := p.pool.Query(ctx, sqlSelect)
-	if err != nil {
-		return nil, fmt.Errorf("select events: %w", err)
-	}
-
-	return getSQLEvents(rawRows)
-}
-
 //nolint:lll
 func (p *PostgresStorage) FindEvents(ctx context.Context, filterParams *models.FilterParams) ([]models.ShortEvent, error) {
 	logger, err := mylogger.Get()
@@ -342,7 +325,7 @@ func (p *PostgresStorage) FindEvents(ctx context.Context, filterParams *models.F
 	query := squirrel.Select(`id, creator_id, sport_type, address, date_start, start_time,
 		end_time, price, game_level, capacity, busy,
 		subscriber_ids, url_preview, url_photos,
-		ST_X(coordinates::geometry) as latitude, ST_Y(coordinates::geometry) as longitude`).
+		ST_X(coordinates::geometry) as latitude, ST_Y(coordinates::geometry) as longitude, expiration_time_coordinates`).
 		From(`"public".event`).
 		PlaceholderFormat(squirrel.Dollar).
 		Where(squirrel.Eq{"deleted_at": nil})
@@ -422,7 +405,8 @@ func (p *PostgresStorage) AddUserPaid(ctx context.Context, id uuid.UUID, userID 
 }
 
 func (p *PostgresStorage) SetCoordinates(ctx context.Context, latitude, longitude string, id uuid.UUID) error {
-	sqlUpdate := `UPDATE public.event SET coordinates = ST_Point( $1, $2, 4326)::geography WHERE id = $3`
+	sqlUpdate := `UPDATE public.event SET coordinates = ST_Point( $1, $2, 4326)::geography,
+                        expiration_time_coordinates = NOW() + interval '29' day WHERE id = $3`
 
 	_, err := p.pool.Exec(ctx, sqlUpdate, latitude, longitude, id)
 	if err != nil {

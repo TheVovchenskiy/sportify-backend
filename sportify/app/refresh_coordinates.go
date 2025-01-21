@@ -5,12 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/TheVovchenskiy/sportify-backend/pkg/reformat_url_open_map"
-	"github.com/google/uuid"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/TheVovchenskiy/sportify-backend/models"
@@ -207,17 +205,6 @@ func (a *App) getCoordinatesByAddress(ctx context.Context, address string, userA
 }
 
 func (a *App) RefreshCoordinates(ctx context.Context, period time.Duration) {
-	type coordinates struct {
-		ID      uuid.UUID
-		Address string
-	}
-
-	var (
-		queueCoordinates       []coordinates
-		isIDInQueueCoordinates = make(map[uuid.UUID]struct{})
-		muQueue                sync.RWMutex
-	)
-
 	go func() {
 		tickerQueueCoordinates := time.NewTicker(time.Millisecond * 1500)
 		for {
@@ -225,28 +212,28 @@ func (a *App) RefreshCoordinates(ctx context.Context, period time.Duration) {
 			case <-ctx.Done():
 				return
 			case <-tickerQueueCoordinates.C:
-				if len(queueCoordinates) != 0 {
+				if len(a.queueCoordinates.queue) != 0 {
 					func() {
-						muQueue.Lock()
-						defer muQueue.Unlock()
+						a.queueCoordinates.mu.Lock()
+						defer a.queueCoordinates.mu.Unlock()
 
-						curCoordinate := queueCoordinates[0]
-						queueCoordinates = queueCoordinates[1:]
-						delete(isIDInQueueCoordinates, curCoordinate.ID)
+						curCoordinate := a.queueCoordinates.queue[0]
+						a.queueCoordinates.queue = a.queueCoordinates.queue[1:]
+						delete(a.queueCoordinates.idsInQueue, curCoordinate.ID)
 
 						latitude, longitude, err := a.getCoordinatesByAddress(ctx, curCoordinate.Address, UserAgentRefresh)
 						if err != nil {
 							a.logger.WithCtx(ctx).Error(
 								fmt.Sprintf("address: %s, err: %s", curCoordinate.Address, err.Error()),
 							)
-							isIDInQueueCoordinates[curCoordinate.ID] = struct{}{}
+							a.queueCoordinates.idsInQueue[curCoordinate.ID] = struct{}{}
 							return
 						}
 
 						err = a.eventStorage.SetCoordinates(ctx, latitude, longitude, curCoordinate.ID)
 						if err != nil {
 							a.logger.WithCtx(ctx).Error(err)
-							isIDInQueueCoordinates[curCoordinate.ID] = struct{}{}
+							a.queueCoordinates.idsInQueue[curCoordinate.ID] = struct{}{}
 							return
 						}
 
@@ -279,17 +266,17 @@ func (a *App) RefreshCoordinates(ctx context.Context, period time.Duration) {
 			}
 
 			for _, event := range events {
-				muQueue.Lock()
-				_, ok := isIDInQueueCoordinates[event.ID]
+				a.queueCoordinates.mu.Lock()
+				_, ok := a.queueCoordinates.idsInQueue[event.ID]
 				if event.Latitude == nil && event.Longitude == nil && !ok {
 					address := reformat_url_open_map.ReformatURLOpenMap(event.Address)
-					queueCoordinates = append(queueCoordinates, coordinates{
+					a.queueCoordinates.queue = append(a.queueCoordinates.queue, coordinates{
 						ID:      event.ID,
 						Address: address,
 					})
-					isIDInQueueCoordinates[event.ID] = struct{}{}
+					a.queueCoordinates.idsInQueue[event.ID] = struct{}{}
 				}
-				muQueue.Unlock()
+				a.queueCoordinates.mu.Unlock()
 			}
 		}
 	}

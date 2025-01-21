@@ -30,7 +30,6 @@ type App interface {
 	CreateEventTg(ctx context.Context, fullEvent *models.FullEvent) (*models.FullEvent, error)
 	EditEventSite(ctx context.Context, request *models.RequestEventEditSite) (*models.FullEvent, error)
 	DeleteEvent(ctx context.Context, userID uuid.UUID, eventID uuid.UUID) error
-	GetEvents(ctx context.Context) ([]models.ShortEvent, error)
 	FindEvents(ctx context.Context, filterParams *models.FilterParams) ([]models.ShortEvent, error)
 	GetEvent(ctx context.Context, id uuid.UUID) (*models.FullEvent, error)
 	SubscribeEventFromTg(ctx context.Context, tgChatID, tgMessageID, tgUserID int64) (*models.ResponseSubscribeEvent, error)
@@ -411,19 +410,6 @@ func (h *Handler) DeleteEvent(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) handleGetEventsError(ctx context.Context, w http.ResponseWriter, errOutside error) {
 	h.logger.WithCtx(ctx).Error(errOutside)
 	models.WriteResponseError(w, models.NewResponseInternalServerErr("", models.InternalServerErrMessage))
-}
-
-func (h *Handler) GetEvents(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	events, err := h.app.GetEvents(ctx)
-	h.logger.WithCtx(ctx).Info("Got events", events)
-	if err != nil {
-		h.handleGetEventsError(ctx, w, err)
-		return
-	}
-
-	models.WriteJSONResponse(w, events)
 }
 
 func (h *Handler) handleFindEvents(ctx context.Context, w http.ResponseWriter, errOutside error) {

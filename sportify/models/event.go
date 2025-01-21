@@ -2,6 +2,7 @@ package models
 
 import (
 	"github.com/google/uuid"
+	"time"
 )
 
 type CreationType string
@@ -96,21 +97,22 @@ func (e *FullEvent) ToBotEvent(creator *BotUser, subscribers []*BotUser, hashtag
 }
 
 type ShortEvent struct {
-	ID          uuid.UUID   `json:"id"`
-	CreatorID   uuid.UUID   `json:"creator_id"`
-	SportType   SportType   `json:"sport_type"`
-	Address     string      `json:"address"`
-	DateAndTime DateAndTime `json:"date_time"`
-	Price       *int        `json:"price"`
-	IsFree      bool        `json:"is_free"`
-	GameLevels  []GameLevel `json:"game_level"`
-	Capacity    *int        `json:"capacity"`
-	Busy        int         `json:"busy"`
-	Subscribers []uuid.UUID `json:"subscribers_id"`
-	URLPreview  string      `json:"preview"`
-	URLPhotos   []string    `json:"photos"`
-	Latitude    *string     `json:"latitude"`
-	Longitude   *string     `json:"longitude"`
+	ID                        uuid.UUID   `json:"id"`
+	CreatorID                 uuid.UUID   `json:"creator_id"`
+	SportType                 SportType   `json:"sport_type"`
+	Address                   string      `json:"address"`
+	DateAndTime               DateAndTime `json:"date_time"`
+	Price                     *int        `json:"price"`
+	IsFree                    bool        `json:"is_free"`
+	GameLevels                []GameLevel `json:"game_level"`
+	Capacity                  *int        `json:"capacity"`
+	Busy                      int         `json:"busy"`
+	Subscribers               []uuid.UUID `json:"subscribers_id"`
+	URLPreview                string      `json:"preview"`
+	URLPhotos                 []string    `json:"photos"`
+	Latitude                  *string     `json:"latitude"`
+	Longitude                 *string     `json:"longitude"`
+	ExpirationTimeCoordinates time.Time   `json:"-"`
 }
 
 func IsFreePrice(price *int) bool {

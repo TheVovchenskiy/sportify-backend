@@ -1,0 +1,1 @@
+ALTER TABLE IF EXISTS event DROP COLUMN IF EXISTS expiration_time_coordinates;
