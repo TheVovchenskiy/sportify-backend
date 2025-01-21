@@ -278,6 +278,7 @@ func (a *App) onEventDelete(ctx context.Context, eventID uuid.UUID) {
 
 func (a *App) getDefaultEventPhoto(sportType models.SportType) string {
 	result := a.urlPrefixFile
+
 	switch sportType {
 	case models.SportTypeFootball:
 		return result + "default_football.jpeg"
@@ -285,11 +286,21 @@ func (a *App) getDefaultEventPhoto(sportType models.SportType) string {
 		return result + "default_basketball.png"
 	case models.SportTypeVolleyball:
 		return result + "default_volleyball.jpg"
+	case models.SportTypeTennis:
+		return result + "default_tennis.jpeg"
+	case models.SportTypeTableTennis:
+		return result + "default_table_tennis.jpg"
+	case models.SportTypeRunning:
+		return result + "default_running.jpg"
+	case models.SportTypeHockey:
+		return result + "default_hockey.png"
+	case models.SportTypeSkating:
+		return result + "default_skating.jpg"
+	case models.SportTypeSkiing:
+		return result + "default_skiing.png"
+	default:
+		return result + "default_football.jpeg"
 	}
-
-	// TODO add default photos for another sport types
-
-	return result + "default_football.jpeg"
 }
 
 func (a *App) CreateEventSite(ctx context.Context, request *models.RequestEventCreateSite) (*models.FullEvent, error) {
